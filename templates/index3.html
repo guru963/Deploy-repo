@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>AltiCred Farmers — Credit Scoring</title>
+<style>
+:root {
+    /* Core color palette extracted from reference */
+    --bg-color: #fafbfc;
+    --primary-accent: #3b82f6;
+    --secondary-accent: #1e40af;
+    --accent-hover: #2563eb;
+    --text-primary: #1f2937;
+    --text-secondary: #6b7280;
+    --text-muted: #9ca3af;
+    --white: #ffffff;
+    --light-gray: #f8fafc;
+    --card-bg: rgba(255, 255, 255, 0.8);
+    --card-border: rgba(59, 130, 246, 0.1);
+    --card-hover-bg: rgba(255, 255, 255, 0.95);
+    --glow-color: rgba(59, 130, 246, 0.3);
+    --shadow-soft: rgba(0, 0, 0, 0.04);
+    --shadow-medium: rgba(59, 130, 246, 0.08);
+    --gradient-primary: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    --gradient-subtle: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    
+    /* Enhanced premium accents */
+    --accent-success: #10b981;
+    --accent-warning: #f59e0b;
+    --accent-error: #ef4444;
+    --accent-info: #06b6d4;
+    --surface-elevated: rgba(255, 255, 255, 0.9);
+    --border-subtle: rgba(59, 130, 246, 0.08);
+    --border-medium: rgba(59, 130, 246, 0.15);
+    
+    /* Typography */
+    --font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif;
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+/* Reset and base styles */
+* {
+    box-sizing: border-box;
+    font-family: var(--font-family);
+}
+
+body {
+    margin: 0;
+    background: var(--gradient-subtle);
+    color: var(--text-secondary);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    line-height: 1.6;
+}
+
+/* Subtle pattern overlay for premium feel */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        radial-gradient(circle at 25% 25%, rgba(59, 130, 246, 0.02) 0%, transparent 50%),
+        radial-gradient(circle at 75% 75%, rgba(29, 78, 216, 0.015) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.container {
+    width: 100%;
+    max-width: 1100px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    position: relative;
+    z-index: 10;
+}
+
+.card {
+    background: var(--card-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    padding: 32px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    box-shadow: 
+        0 20px 40px var(--shadow-soft),
+        0 8px 16px var(--shadow-medium),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 
+        0 25px 50px var(--shadow-soft),
+        0 12px 24px var(--shadow-medium),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+/* Typography */
+h1 {
+    color: #000000;
+    margin: 0 0 12px;
+    font-size: 1.75rem;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+}
+
+label {
+    display: block;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    letter-spacing: -0.01em;
+}
+
+/* Form inputs */
+input[type="number"], 
+input[type="text"], 
+select {
+    width: 100%;
+    padding: 12px 16px;
+    border-radius: 12px;
+    border: 1px solid var(--border-subtle);
+    background: var(--white);
+    color: var(--text-primary);
+    margin-bottom: 16px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 1px 2px var(--shadow-soft);
+}
+
+input[type="number"]:focus, 
+input[type="text"]:focus, 
+select:focus {
+    outline: none;
+    border-color: var(--primary-accent);
+    box-shadow: 
+        0 0 0 3px rgba(59, 130, 246, 0.1),
+        0 2px 4px var(--shadow-soft);
+    background: var(--white);
+}
+
+input[type="number"]:hover, 
+input[type="text"]:hover, 
+select:hover {
+    border-color: var(--border-medium);
+    box-shadow: 0 2px 4px var(--shadow-soft);
+}
+
+input[type="number"]::placeholder, 
+input[type="text"]::placeholder {
+    color: var(--text-muted);
+    font-weight: 400;
+}
+
+.two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+/* Button */
+.btn {
+    background: var(--gradient-primary);
+    color: white;
+    padding: 14px 24px;
+    border-radius: 12px;
+    border: none;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    width: 100%;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 
+        0 4px 12px rgba(59, 130, 246, 0.2),
+        0 2px 4px var(--shadow-soft);
+    letter-spacing: -0.01em;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 
+        0 8px 20px rgba(59, 130, 246, 0.25),
+        0 4px 8px var(--shadow-soft);
+    background: linear-gradient(135deg, var(--accent-hover) 0%, var(--secondary-accent) 100%);
+}
+
+.btn:active {
+    transform: translateY(0);
+    box-shadow: 
+        0 2px 8px rgba(59, 130, 246, 0.2),
+        0 1px 2px var(--shadow-soft);
+}
+
+/* Results section */
+.result_box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 280px;
+    text-align: center;
+    gap: 20px;
+}
+
+.score {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.05), rgba(255, 255, 255, 0.8));
+    border: 2px solid rgba(16, 185, 129, 0.2);
+    color: var(--accent-success);
+    padding: 20px 32px;
+    border-radius: 16px;
+    font-weight: 800;
+    font-size: 1.5rem;
+    box-shadow: 
+        0 8px 16px rgba(16, 185, 129, 0.1),
+        0 2px 4px var(--shadow-soft);
+    letter-spacing: -0.02em;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.small {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin-top: 8px;
+    font-weight: 500;
+}
+
+/* Section titles */
+.section-title {
+    color: var(--primary-accent);
+    margin: 20px 0 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    border-bottom: 2px solid rgba(59, 130, 246, 0.1);
+    padding-bottom: 8px;
+    letter-spacing: -0.01em;
+}
+
+/* Explanation box */
+.explain-box {
+    background: var(--surface-elevated);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    padding: 20px;
+    border-radius: 12px;
+    margin-top: 20px;
+    font-size: 0.9rem;
+    border: 1px solid var(--border-subtle);
+    box-shadow: 0 4px 8px var(--shadow-soft);
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.explain-box strong {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+/* Server stats */
+#server-stats {
+    background: var(--light-gray);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    border: 1px solid var(--border-subtle);
+    font-weight: 500;
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+}
+
+/* Responsive design */
+@media (max-width: 980px) {
+    .container {
+        grid-template-columns: 1fr;
+        gap: 24px;
+        max-width: 600px;
+    }
+    
+    .card {
+        padding: 24px;
+    }
+    
+    .two-col {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    
+    h1 {
+        font-size: 1.5rem;
+    }
+    
+    .score {
+        font-size: 1.3rem;
+        padding: 16px 24px;
+    }
+}
+
+@media (max-width: 640px) {
+    body {
+        padding: 16px;
+    }
+    
+    .card {
+        padding: 20px;
+    }
+    
+    .btn {
+        padding: 12px 20px;
+    }
+    
+    .result_box {
+        min-height: 240px;
+    }
+}
+
+/* Focus states for accessibility */
+.btn:focus {
+    outline: none;
+    box-shadow: 
+        0 0 0 3px rgba(59, 130, 246, 0.3),
+        0 8px 20px rgba(59, 130, 246, 0.25),
+        0 4px 8px var(--shadow-soft);
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+    
+    .card:hover {
+        transform: none;
+    }
+    
+    .btn:hover {
+        transform: none;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    :root {
+        --card-border: rgba(59, 130, 246, 0.3);
+        --border-subtle: rgba(59, 130, 246, 0.2);
+        --border-medium: rgba(59, 130, 246, 0.4);
+    }
+    
+    input[type="number"], 
+    input[type="text"], 
+    select {
+        border-width: 2px;
+    }
+    
+    .score {
+        border-width: 3px;
+    }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <!-- Left Column - Input Form -->
+  <div class="card">
+    <h1>AltiCred Farmers — Score Calculator</h1>
+    <p class="small">Provide any subset of features below. Leave blank to use defaults.</p>
+
+    <form id="main-form">
+      <div class="two-col">
+        <!-- Column 1 -->
+        <div>
+          <div class="section-title">Digital Trust</div>
+          <label>Reliable Contacts Ratio</label>
+          <input name="reliable_contacts_ratio" type="number" step="0.01" placeholder="0.0-1.0">
+          
+          <label>Digital Network Engagement</label>
+          <input name="digital_network_engagement_score" type="number" step="0.01" placeholder="0.0-1.0">
+          
+          <label>Support Request Frequency</label>
+          <input name="support_request_frequency" type="number" placeholder="Count">
+          
+          <div class="section-title">Resilience</div>
+          <label>Time to Resume UPI After Shock</label>
+          <input name="time_to_resume_upi_after_shock" type="number" placeholder="Days">
+          
+          <label>Overdraft Usage Frequency</label>
+          <input name="overdraft_usage_frequency" type="number" placeholder="Count">
+          
+          <label>Yield Recovery Ratio</label>
+          <input name="yield_recovery_ratio" type="number" step="0.01" placeholder="0.0-1.0">
+        </div>
+
+        <!-- Column 2 -->
+        <div>
+          <div class="section-title">Adaptability</div>
+          <label>Income Volatility Score</label>
+          <input name="income_volatility_score" type="number" step="0.01" placeholder="0.0-1.0">
+          
+          <label>Agritech Tool Usage</label>
+          <input name="agritech_tool_usage" type="number" placeholder="0 or 1">
+          
+          <label>New Crop Adoption</label>
+          <input name="new_crop_adoption_flag" type="number" placeholder="0 or 1">
+          
+          <div class="section-title">Financial Behavior</div>
+          <label>EMI Status (Last 12 Months)</label>
+          <input name="emi_status_last_12_months" type="number" placeholder="Count">
+          
+          <label>Loan Repayment Ratio</label>
+          <input name="loan_repayment_ratio" type="number" step="0.01" placeholder="0.0-1.0">
+          
+          <label>Budgeting Habit Score</label>
+          <input name="budgeting_habit_score" type="number" step="0.01" placeholder="0.0-1.0">
+        </div>
+      </div>
+
+      <div style="margin-top:20px">
+        <button class="btn" type="submit">Calculate Credit Score</button>
+      </div>
+    </form>
+
+    <div class="small" id="server-stats" style="margin-top:12px"></div>
+  </div>
+
+  <!-- Right Column - Results -->
+  <div class="card">
+    <div class="result_box">
+      <div id="score" class="score">No prediction yet</div>
+      <div class="small">Your AltiCred score will appear here</div>
+      
+      <div class="explain-box" id="explain">
+        After calculation, you'll see component predictions and final stacked score here.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const baseEval = {{ base_eval|tojson|safe }};
+const metaEval = {{ meta_eval|tojson|safe }};
+
+document.addEventListener('DOMContentLoaded', () => {
+  const stats = document.getElementById('server-stats');
+  const parts = [];
+  for (const [k,v] of Object.entries(baseEval)){
+    parts.push(`${k}: RMSE=${v.rmse.toFixed(3)}`);
+  }
+  parts.push(`Meta: RMSE=${metaEval.rmse.toFixed(3)}`);
+  stats.textContent = parts.join(' | ');
+});
+
+document.getElementById('main-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const user_data = {};
+  for (const [k,v] of fd.entries()){
+    if (v !== '') user_data[k] = v;
+  }
+  const payload = { mode: "full", user_data };
+  const scoreDiv = document.getElementById('score');
+  scoreDiv.textContent = 'Calculating...';
+
+  try {
+    const resp = await fetch('/predict', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const j = await resp.json();
+    if (!resp.ok) {
+      scoreDiv.textContent = 'Error: ' + (j.error || 'server');
+      return;
+    }
+    
+    // Format the component predictions
+    const base = j.base_preds;
+    const lines = [];
+    for (const k of Object.keys(base)) {
+      lines.push(`<strong>${k}:</strong> ${Number(base[k]).toFixed(3)}`);
+    }
+    
+    const finalVal = Number(j.alticred_score);
+    await animateCount(scoreDiv, finalVal);
+    
+    document.getElementById('explain').innerHTML = `
+      <div style="margin-bottom:8px;color:#00ff99">Component Scores:</div>
+      ${lines.join('<br>')}
+    `;
+  } catch (err) {
+    scoreDiv.textContent = 'Network error — is server running?';
+  }
+});
+
+function animateCount(dom, target) {
+  return new Promise(resolve => {
+    const start = performance.now();
+    const duration = 900;
+    function frame(now){
+      const t = Math.min(1,(now-start)/duration);
+      const ease = 1 - Math.pow(1 - t, 3);
+      const cur = target * ease;
+      dom.textContent = cur.toFixed(4);
+      dom.style.color = t < 1 ? '#fff' : '#00ff99';
+      if (t < 1) requestAnimationFrame(frame);
+      else resolve();
+    }
+    requestAnimationFrame(frame);
+  });
+}
+</script>
+</body>
+</html>

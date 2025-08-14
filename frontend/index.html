@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AltiCred AI - Welcome</title>
+    <style>
+        :root {
+            --bg-color: #fafbfc;
+            --primary-accent: #3b82f6;
+            --secondary-accent: #1e40af;
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --text-muted: #9ca3af;
+            --white: #ffffff;
+            --light-gray: #f8fafc;
+            --border-light: #e5e7eb;
+            --shadow-soft: rgba(0, 0, 0, 0.04);
+            --shadow-medium: rgba(0, 0, 0, 0.1);
+            --gradient-primary: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            --gradient-subtle: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        }
+        
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+            background: var(--gradient-subtle);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif;
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle at 25% 25%, rgba(59, 130, 246, 0.02) 0%, transparent 50%),
+                radial-gradient(circle at 75% 75%, rgba(29, 78, 216, 0.015) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        #splash-video {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            min-width: 100%;
+            min-height: 100%;
+            width: auto;
+            height: auto;
+            z-index: 2;
+            transform: translate(-50%, -50%);
+            object-fit: cover;
+            opacity: 0.3;
+            filter: blur(1px) brightness(1.2) saturate(0.8);
+        }
+        
+        .splash-container {
+            position: relative;
+            z-index: 10;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 32px;
+            padding: 20px;
+        }
+        
+        .fade-in-element {
+            opacity: 0;
+            transition: all 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translateY(20px);
+        }
+        
+        .fade-in-element.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .logo-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 24px;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            padding: 40px 48px;
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 
+                0 20px 40px var(--shadow-soft),
+                0 8px 16px rgba(59, 130, 246, 0.04),
+                inset 0 1px 0 rgba(255, 255, 255, 0.9);
+        }
+        
+        .logo-shield {
+            width: 88px;
+            height: auto;
+            filter: drop-shadow(0 4px 8px var(--shadow-soft));
+        }
+        
+        .logo-text h1 {
+            font-size: 3.8em;
+            margin: 0;
+            padding: 0;
+            color: var(--text-primary);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            text-shadow: 0 2px 4px var(--shadow-soft);
+        }
+        
+        .logo-text span {
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .logo-text p {
+            font-size: 1.3em;
+            color: var(--text-secondary);
+            margin: 8px 0 0 0;
+            padding: 0;
+            line-height: 1.3;
+            font-weight: 500;
+            letter-spacing: 0.01em;
+        }
+        
+        .btn {
+            background: var(--gradient-primary);
+            color: var(--white);
+            border: none;
+            padding: 16px 36px;
+            font-size: 1.1em;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 600;
+            letter-spacing: 0.01em;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 
+                0 8px 16px rgba(59, 130, 246, 0.2),
+                0 4px 8px rgba(59, 130, 246, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+            transition: left 0.6s;
+        }
+        
+        .btn:hover::before {
+            left: 100%;
+        }
+        
+        .btn:hover {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            transform: translateY(-2px);
+            box-shadow: 
+                0 12px 24px rgba(59, 130, 246, 0.25),
+                0 6px 12px rgba(59, 130, 246, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        }
+        
+        .btn:active {
+            transform: translateY(-1px);
+            box-shadow: 
+                0 6px 12px rgba(59, 130, 246, 0.2),
+                0 3px 6px rgba(59, 130, 246, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+        
+        @media (max-width: 768px) {
+            .logo-text h1 {
+                font-size: 3em;
+            }
+            .logo-text p {
+                font-size: 1.1em;
+            }
+            .btn {
+                padding: 14px 28px;
+                font-size: 1em;
+            }
+        }
+        
+        .btn:focus {
+            outline: none;
+            box-shadow: 
+                0 8px 16px rgba(59, 130, 246, 0.2),
+                0 4px 8px rgba(59, 130, 246, 0.1),
+                0 0 0 3px rgba(59, 130, 246, 0.3);
+        }
+        
+        @media (prefers-reduced-motion: reduce) {
+            .fade-in-element {
+                transition: opacity 0.3s ease;
+                transform: none;
+            }
+            .btn::before {
+                transition: none;
+            }
+            .btn:hover::before {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <svg width="0" height="0" style="position:absolute;">
+        <defs>
+            <linearGradient id="logo-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#3b82f6;" />
+                <stop offset="100%" style="stop-color:#1d4ed8;" />
+            </linearGradient>
+        </defs>
+    </svg>
+
+    <video autoplay muted loop id="splash-video">
+        <source src="" type="video/mp4">
+        Your browser does not support the video tag.
+    </video>
+
+    <div class="splash-container">
+        <div id="logo-container" class="logo-container fade-in-element">
+            <svg class="logo-shield" viewBox="0 0 100 110" fill="url(#logo-gradient)">
+                <path d="M50 0 L100 20 L100 70 Q100 100, 50 110 Q0 100, 0 70 L0 20 Z"/>
+                <g fill="none" stroke="white" stroke-width="5" stroke-linecap="round">
+                    <path d="M50 40 L75 60 L50 80 L25 60 Z"/>
+                    <circle cx="25" cy="60" r="5" fill="white"/>
+                    <circle cx="75" cy="60" r="5" fill="white"/>
+                    <circle cx="50" cy="40" r="5" fill="white"/>
+                    <circle cx="50" cy="80" r="5" fill="white"/>
+                </g>
+            </svg>
+            <div class="logo-text">
+                <h1>Alti<span>Cred</span> AI</h1>
+                <p>Inclusive Credit Risk Intelligence</p>
+            </div>
+
+            <!-- Two buttons under logo -->
+            <div id="extra-buttons" style="display: flex; gap: 20px; margin-top: 10px; flex-wrap: wrap; justify-content: center;">
+                <a href="landing.html" style="text-decoration: none;">
+                    <button class="btn fade-in-element">Check score as a lender</button>
+                </a>
+                <a href="#" style="text-decoration: none;">
+                    <button class="btn fade-in-element">Know your credit score</button>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const logo = document.getElementById('logo-container');
+            const extraButtons = document.getElementById('extra-buttons').querySelectorAll('.fade-in-element');
+            const video = document.getElementById('splash-video');
+
+            // Step 1: Fade in the logo after 1 second
+            setTimeout(() => {
+                logo.classList.add('visible');
+            }, 1000);
+
+            // Step 2: Fade in the two new buttons 0.5s after logo
+            setTimeout(() => {
+                extraButtons.forEach(btn => btn.classList.add('visible'));
+            }, 1500);
+
+            // Optional: Pause video after 5s
+            setTimeout(() => {
+                if (video.src && video.src !== window.location.href) {
+                    video.pause();
+                }
+            }, 5000);
+        });
+    </script>
+</body>
+</html>
