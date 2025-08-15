@@ -6,10 +6,11 @@ from xgboost import XGBRegressor
 from sklearn.linear_model import Lasso, Ridge
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import mean_squared_error, r2_score, make_scorer
+import pickle
 
 sns.set_style("darkgrid")
 
-DATA_PATH = "farmers.csv"
+DATA_PATH = "data/farmers_data.csv"
 
 # === 1. Load dataset ===
 df = pd.read_csv(DATA_PATH)
@@ -146,18 +147,29 @@ print("\n🎯 Meta-model Evaluation:")
 print(f"RMSE: {np.sqrt(mean_squared_error(meta_y_test, meta_pred)):.4f}")
 print(f"R²:   {r2_score(meta_y_test, meta_pred):.4f}")
 
-# === 7. Take user input for all features ===
+# === 7. Save component models and meta-model to .pkl ===
+for name, model in models.items():
+    filename = f"{name}_model.pkl"
+    with open(filename, "wb") as f:
+        pickle.dump(model, f)
+    print(f"✅ Saved {name} model to {filename}")
+
+with open("meta_model.pkl", "wb") as f:
+    pickle.dump(meta_model, f)
+print("✅ Saved meta-model to meta_model.pkl")
+
+# === 8. Take user input for all features ===
 print("\n=== Enter User Data for Prediction ===")
 user_data = {}
 for feat in sorted(set(f for feats in features_map.values() for f in feats)):
     val = input(f"Enter {feat}: ")
     user_data[feat] = float(val)
 
-# === 8. Predict component scores ===
+# === 9. Predict component scores ===
 user_df = pd.DataFrame([user_data])
 base_preds = {f"{name}_pred": models[name].predict(user_df[features_map[name]])[0] for name in models}
 
-# === 9. Predict final score ===
+# === 10. Predict final score ===
 final_score = meta_model.predict(pd.DataFrame([base_preds]))[0]
 
 print("\n=== Prediction Results ===")
