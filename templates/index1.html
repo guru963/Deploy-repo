@@ -391,15 +391,11 @@
 </form>
 
 {% if score is not none %}
-<div class="result">
-    {% if score is string %}
-        {{ score }}
-    {% else %}
-        Your <span class="score-number">Adaptability Score</span> is:
-        <div class="score-number">{{ "%.4f" | format(score) }}</div>
-    {% endif %}
-</div>
+    <div class="score-number">{{ "%.4f"|format(score) }}</div>
+{% else %}
+    <div class="score-number">No score yet</div>
 {% endif %}
+
 
 
 </body>

@@ -1,12 +1,9 @@
-import os
+from flask import Blueprint, render_template, request, jsonify, send_from_directory, url_for
 from pathlib import Path
+import os
 import warnings
-import json
-
-import numpy as np
 import pandas as pd
-from flask import Flask, render_template, request, jsonify, send_from_directory, url_for
-
+import numpy as np
 from sklearn.linear_model import Lasso, Ridge
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import mean_squared_error, r2_score, make_scorer
@@ -15,20 +12,20 @@ import joblib
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+farmer_bp = Blueprint(
+    'farmer', __name__,
+    template_folder='../templates',
+    static_folder='../static'
+)
+
 warnings.filterwarnings("ignore")
 sns.set_style("darkgrid")
 
 BASE_DIR = Path(__file__).resolve().parent
-DATA_PATH = BASE_DIR /"data"/ "farmers_data.csv"
+DATA_PATH = BASE_DIR.parent / "data" / "farmers_data.csv"
 MODELS_PATH = BASE_DIR / "models_joblib.pkl"
-STATIC_IMG_DIR = BASE_DIR / "static" / "images"
+STATIC_IMG_DIR = BASE_DIR.parent / "static" / "images"
 STATIC_IMG_DIR.mkdir(parents=True, exist_ok=True)
-
-app = Flask(__name__, template_folder=str(BASE_DIR / "templates"), static_folder=str(BASE_DIR / "static"))
-
-# -------------------------
-# Synthetic data generator (kept for compatibility)
-# -------------------------
 
 # -------------------------
 # Feature engineering
@@ -144,11 +141,10 @@ def plot_feature_importance(model, features, out_path: Path, title: str):
 # -------------------------
 def train_and_save_models(force_retrain=False):
     if MODELS_PATH.exists() and not force_retrain:
-        print("Loading models from disk...")
+        print("[Farmer] Loading models from disk...")
         return joblib.load(MODELS_PATH)
 
-    print("Training models...")
-    
+    print("[Farmer] Training models...")
     df = add_component_scores(pd.read_csv(DATA_PATH))
 
     base_models = {}
@@ -195,6 +191,7 @@ def train_and_save_models(force_retrain=False):
         out_img = STATIC_IMG_DIR / f"{name}_importance.png"
         plot_feature_importance(model, features, out_img, f"{name} importance")
 
+    # Meta model
     meta_df = pd.DataFrame(index=df.index)
     for name, m in base_models.items():
         meta_df[f"{name}_pred"] = m.predict(df[model_feature_map()[name]])
@@ -226,15 +223,16 @@ def train_and_save_models(force_retrain=False):
         "meta_eval": meta_eval
     }
     joblib.dump(payload, MODELS_PATH)
-    print("Models saved.")
+    print("[Farmer] Models saved.")
     return payload
 
+# Load models once
 MODELS = train_and_save_models()
 
 # -------------------------
 # Routes
 # -------------------------
-@app.route("/")
+@farmer_bp.route('/')
 def index():
     images = sorted([p.name for p in STATIC_IMG_DIR.glob("*.png")])
     return render_template(
@@ -244,15 +242,13 @@ def index():
         meta_eval=MODELS["meta_eval"]
     )
 
-@app.route("/predict", methods=["POST"])
+@farmer_bp.route('/predict', methods=["POST"])
 def predict():
     payload = request.get_json(force=True)
     mode = payload.get("mode", "full")
     user_data = payload.get("user_data", {})
 
     df_ref = pd.read_csv(DATA_PATH)
-
-    # Only keep features used in models
     model_feats = sorted({f for feats in model_feature_map().values() for f in feats})
     df_ref = df_ref[model_feats]
 
@@ -268,7 +264,7 @@ def predict():
             try:
                 sample[feat] = float(val)
             except ValueError:
-                sample[feat] = val  # leave as string if needed
+                sample[feat] = val
 
     sample_df = pd.DataFrame([sample])
 
@@ -290,14 +286,11 @@ def predict():
     return jsonify({
         "alticred_score": final_score,
         "base_preds": base_preds,
-        "images": [url_for("static", filename=f"images/{fn}") for fn in sorted(os.listdir(STATIC_IMG_DIR))],
+        "images": [url_for("farmer.static", filename=f"images/{fn}") for fn in sorted(os.listdir(STATIC_IMG_DIR))],
         "base_eval": MODELS["base_eval"],
         "meta_eval": MODELS["meta_eval"],
     })
 
-@app.route("/static/images/<path:filename>")
+@farmer_bp.route("/static/images/<path:filename>")
 def serve_img(filename):
     return send_from_directory(STATIC_IMG_DIR, filename)
-
-if __name__ == "__main__":
-    app.run(debug=True)

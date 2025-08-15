@@ -13,7 +13,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 class AdaptabilityScorer:
-    def _init_(self, file_path='/kaggle/input/student-alticred-dataset/modified_student_data_v2.csv'):
+    def __init__(self, file_path='/kaggle/input/student-alticred-dataset/modified_student_data_v2.csv'):
         self.file_path = file_path
         self.df = self._load_and_clean_data()
         self._train_model()
@@ -91,7 +91,7 @@ class AdaptabilityScorer:
         score = self.adapt_model_pipeline.predict_proba(user_df)[0][0]
         return np.clip(score, 0, 1)
 
-if _name_ == '_main_':
+if __name__ == '__main__':
     scorer = AdaptabilityScorer()
     print("\n--- Interactive Adaptability Score Calculator ---")
     while True:

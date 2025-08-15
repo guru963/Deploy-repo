@@ -1,20 +1,19 @@
-from flask import Flask, render_template, request
+from flask import Blueprint, render_template, request
 import pandas as pd
 import numpy as np
-import pickle
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.model_selection import train_test_split
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import roc_auc_score, accuracy_score
+from sklearn.metrics import roc_auc_score
 import xgboost as xgb
 import lightgbm as lgb
 import warnings
 
 warnings.filterwarnings('ignore')
 
-app = Flask(__name__)
+student_bp = Blueprint('student', __name__, template_folder='templates')
 
 class AdaptabilityScorer:
     def __init__(self, file_path='data/modified_student_data_v2.csv'):
@@ -63,7 +62,7 @@ class AdaptabilityScorer:
         }
 
         best_auc = -np.inf
-        for name, model in models.items():
+        for model in models.values():
             pipeline = Pipeline(steps=[
                 ('preprocessor', preprocessor),
                 ('classifier', model)
@@ -79,10 +78,11 @@ class AdaptabilityScorer:
         score = self.adapt_model_pipeline.predict_proba(user_df)[0][0]
         return np.clip(score, 0, 1)
 
-# Load and train model once
+print("[Student] Loading and training model...")
 scorer = AdaptabilityScorer()
+print("[Student] Model ready!")
 
-@app.route('/', methods=['GET', 'POST'])
+@student_bp.route('/', methods=['GET', 'POST'])
 def index():
     score = None
     if request.method == 'POST':
@@ -104,6 +104,3 @@ def index():
         except Exception as e:
             score = f"Error: {e}"
     return render_template('index1.html', score=score)
-
-if __name__ == '__main__':
-    app.run(debug=True)

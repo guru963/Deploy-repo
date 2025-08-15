@@ -1,0 +1,48 @@
+<!-- templates/error.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Error</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .error-box {
+            background-color: white;
+            border: 1px solid #ddd;
+            padding: 2rem;
+            border-radius: 8px;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0px 4px 8px rgba(0,0,0,0.05);
+        }
+        h1 {
+            color: #d9534f;
+        }
+        a {
+            color: #007bff;
+            text-decoration: none;
+            margin-top: 1rem;
+            display: inline-block;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-box">
+        <h1>Oops!</h1>
+        <p>{{ error }}</p>
+        <a href="/">Back to Home</a>
+    </div>
+</body>
+</html>

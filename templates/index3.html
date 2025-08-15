@@ -474,7 +474,7 @@ document.getElementById('main-form').addEventListener('submit', async (e) => {
   scoreDiv.textContent = 'Calculating...';
 
   try {
-    const resp = await fetch('/predict', {
+    const resp = await fetch('/farmer/predict', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify(payload)
