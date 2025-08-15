@@ -7,3 +7,4 @@ lightgbm
 scikit-learn
 tensorflow
 gunicorn==22.0.0
+matplotlib==3.8.2
