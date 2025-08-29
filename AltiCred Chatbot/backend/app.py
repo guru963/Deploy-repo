@@ -7,6 +7,7 @@ from flask_cors import CORS
 import numpy as np
 from dotenv import load_dotenv
 import google.generativeai as genai
+import logging
 
 # Load environment variables from .env file
 load_dotenv()
@@ -15,6 +16,7 @@ load_dotenv()
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 # Import your model classes from the models directory
+# Note: These files must exist and be correct
 from models.alticred_salaried import AltiCredScorer
 from models.student import AdaptabilityScorer
 from models.farmers import main as farmers_main, generate_synthetic_data
@@ -23,21 +25,30 @@ from models.farmers import main as farmers_main, generate_synthetic_data
 app = Flask(__name__)
 CORS(app) 
 
+# --- Configure logging for production ---
+if __name__ != '__main__':
+    gunicorn_logger = logging.getLogger('gunicorn.error')
+    app.logger.handlers = gunicorn_logger.handlers
+    app.logger.setLevel(gunicorn_logger.level)
+
 # --- Load Models on App Startup ---
-print("Loading all models...")
-salaried_scorer = AltiCredScorer(file_path='./data/salaried_dataset.csv')
-student_scorer = AdaptabilityScorer(file_path='./data/modified_student_data_v2.csv')
-
-# The farmers.py script needs a different approach
-generate_synthetic_data(file_path='./data/farmers_data.csv')
-from models.farmers import main
-main()
-print("All models loaded successfully!")
-
+app.logger.info("Loading all models...")
+try:
+    salaried_scorer = AltiCredScorer(file_path='./data/salaried_dataset.csv')
+    student_scorer = AdaptabilityScorer(file_path='./data/modified_student_data_v2.csv')
+    # The farmers.py script needs a different approach
+    generate_synthetic_data(file_path='./data/farmers_data.csv')
+    from models.farmers import main
+    main()
+    app.logger.info("All models loaded successfully!")
+except Exception as e:
+    app.logger.error(f"Failed to load models: {e}")
+    # Consider if you want to exit or let the app run in a degraded state
+    
 # --- Configure Gemini API ---
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 generation_config = {
-    "temperature": 0.2, # Lower temperature for less creative, more literal translations
+    "temperature": 0.2,
     "top_p": 1,
     "top_k": 1,
     "max_output_tokens": 2048,
@@ -95,7 +106,7 @@ def translate_to_english(text):
         response = model.generate_content(prompt, generation_config=generation_config)
         return response.text
     except Exception as e:
-        print(f"Translation failed: {e}")
+        app.logger.error(f"Translation failed: {e}")
         return text
 
 # --- API Endpoint to Get Score ---
@@ -143,6 +154,3 @@ def get_score():
             
     else:
         return jsonify({"error": "Invalid user_type"}), 400
-
-if __name__ == '__main__':
-    app.run(debug=True, port=5000)
