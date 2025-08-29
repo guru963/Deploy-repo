@@ -27,8 +27,10 @@ function Chat({ userType, onBack }) {
     // Clear input field
     setInput('');
 
-    // Call the Flask API
-    const response = await fetch('http://localhost:5000/get_score', {
+    // Call the Flask API using the correct Render backend URL
+    const backendUrl = 'https://alticred-chatbot-backend.onrender.com';
+    
+    const response = await fetch(`${backendUrl}/get_score`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
