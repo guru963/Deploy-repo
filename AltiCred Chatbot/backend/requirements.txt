@@ -11,3 +11,5 @@ matplotlib==3.8.2
 python-dotenv==1.0.1
 google-generativeai==0.3.2
 seaborn==0.13.2
+scipy==1.13.0
+matplotlib==3.8.2
