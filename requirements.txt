@@ -26,7 +26,7 @@ markdown-it-py==3.0.0
 MarkupSafe==3.0.2
 matplotlib==3.8.4
 mdurl==0.1.2
-ml_dtypes==0.2.0
+ml_dtypes==0.3.1
 namex==0.0.8
 numba==0.58.1
 numpy==1.26.4
