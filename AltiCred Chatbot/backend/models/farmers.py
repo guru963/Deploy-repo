@@ -18,7 +18,7 @@ import pickle
 # -----------------------
 # CONFIG
 # -----------------------
-DATA_PATH = "data/farmer.csv"  # change if needed
+DATA_PATH = "./data/farmer.csv"  # change if needed
 RANDOM_STATE = 42
 USE_TF_AUTOENCODER = True   # try TF; will fallback to PCA
 LATENT_DIM = 8              # embedding size (PCA or AE)
