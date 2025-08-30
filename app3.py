@@ -1,303 +1,229 @@
+from flask import Flask, render_template, request, jsonify
 import os
-from pathlib import Path
-import warnings
-import json
-
+import pickle
 import numpy as np
 import pandas as pd
-from flask import Flask, render_template, request, jsonify, send_from_directory, url_for
-
-from sklearn.linear_model import Lasso, Ridge
-from sklearn.model_selection import train_test_split, GridSearchCV
-from sklearn.metrics import mean_squared_error, r2_score, make_scorer
-from xgboost import XGBRegressor
-import joblib
-import matplotlib.pyplot as plt
-import seaborn as sns
-
+from sklearn.preprocessing import StandardScaler
+import warnings
 warnings.filterwarnings("ignore")
-sns.set_style("darkgrid")
 
-BASE_DIR = Path(__file__).resolve().parent
-DATA_PATH = BASE_DIR /"data"/ "farmers_data.csv"
-MODELS_PATH = BASE_DIR / "models_joblib.pkl"
-STATIC_IMG_DIR = BASE_DIR / "static" / "images"
-STATIC_IMG_DIR.mkdir(parents=True, exist_ok=True)
+app = Flask(__name__)
 
-app = Flask(__name__, template_folder=str(BASE_DIR / "templates"), static_folder=str(BASE_DIR / "static"))
+# Global variables for models and scalers
+models = {}
+meta_model = None
+scaler_rep = None
+rep_features = []
+Z_cols = []
+encoder = None
+pca = None
+AE_AVAILABLE = False
 
-# -------------------------
-# Synthetic data generator (kept for compatibility)
-# -------------------------
-
-# -------------------------
-# Feature engineering
-# -------------------------
-def add_component_scores(df):
-    df = df.copy()
-    df["digital_trust_graph_score"] = (
-        df["reliable_contacts_ratio"] * 50
-        - df["proximity_to_defaulters_score"] * 0.4
-        + df["digital_network_engagement_score"] * 0.3
-        + df["social_connections_count"] * 0.1
-        + df["financial_optimism_index"] * 10
-        - df["stress_signal_intensity"] * 5
-        - df["support_request_frequency"] * 0.2
-    )
-    df["resilience_recovery_score"] = (
-        100
-        - df["time_to_resume_upi_after_shock"] * 0.3
-        - df["emi_status_last_12_months"] * 2
-        - df["overdraft_usage_frequency"] * 1.5
-        + df["loan_repayment_ratio"] * 30
-        + df["yield_recovery_ratio"] * 20
-    )
-    df["adaptability_score"] = (
-        -df["income_volatility_score"] * 0.3
-        + df["yield_recovery_ratio"] * 40
-        + df["budgeting_habit_score"] * 15
-        + df["agritech_tool_usage"] * 10
-        + df["loan_repayment_ratio"] * 20
-        + df["new_crop_adoption_flag"] * 5
-    )
-    df["language_sentiment_score"] = (
-        df["financial_optimism_index"] * 30
-        - df["stress_signal_intensity"] * 25
-        + df["budgeting_habit_score"] * 20
-        + df["in_cooperative"] * 10
-        + df["agritech_tool_usage"] * 15
-    )
-    return df
-
-# -------------------------
-# Model feature map
-# -------------------------
-def model_feature_map():
-    return {
-        "digital_trust": [
-            "reliable_contacts_ratio",
-            "proximity_to_defaulters_score",
-            "digital_network_engagement_score",
-            "social_connections_count",
-            "financial_optimism_index",
-            "stress_signal_intensity",
-            "support_request_frequency",
-        ],
-        "resilience": [
-            "time_to_resume_upi_after_shock",
-            "emi_status_last_12_months",
-            "overdraft_usage_frequency",
-            "loan_repayment_ratio",
-            "yield_recovery_ratio",
-        ],
-        "adaptability": [
-            "income_volatility_score",
-            "yield_recovery_ratio",
-            "budgeting_habit_score",
-            "agritech_tool_usage",
-            "loan_repayment_ratio",
-            "new_crop_adoption_flag",
-        ],
-        "language_sentiment": [
-            "financial_optimism_index",
-            "stress_signal_intensity",
-            "budgeting_habit_score",
-            "in_cooperative",
-            "agritech_tool_usage",
-        ],
-    }
-
-model_configs = {
-    "digital_trust": {"target": "digital_trust_graph_score", "model_type": "Lasso"},
-    "resilience": {"target": "resilience_recovery_score", "model_type": "XGBoost_Grid"},
-    "adaptability": {"target": "adaptability_score", "model_type": "XGBoost_Fixed"},
-    "language_sentiment": {"target": "language_sentiment_score", "model_type": "Lasso"},
-}
-
-# -------------------------
-# Plot feature importance
-# -------------------------
-def plot_feature_importance(model, features, out_path: Path, title: str):
-    plt.figure(figsize=(7, 3.8))
-    fig = plt.gcf()
-    ax = plt.gca()
-    fig.patch.set_facecolor("#111111")
-    ax.set_facecolor("#111111")
-    plt.rcParams.update({
-        "text.color": "white",
-        "axes.labelcolor": "white",
-        "xtick.color": "white",
-        "ytick.color": "white"
-    })
-    if hasattr(model, "coef_"):
-        vals = pd.Series(model.coef_, index=features).sort_values()
-    else:
-        vals = pd.Series(model.feature_importances_, index=features).sort_values()
-    vals.plot(kind="barh", color="#ff4d4d")
-    plt.title(title, color="#ff4d4d")
-    plt.tight_layout()
-    plt.savefig(out_path, dpi=150, facecolor=fig.get_facecolor())
-    plt.close()
-
-# -------------------------
-# Train or load models
-# -------------------------
-def train_and_save_models(force_retrain=False):
-    if MODELS_PATH.exists() and not force_retrain:
-        print("Loading models from disk...")
-        return joblib.load(MODELS_PATH)
-
-    print("Training models...")
+def load_models():
+    """Load all trained models and preprocessing objects"""
+    global models, meta_model, scaler_rep, rep_features, Z_cols, encoder, pca, AE_AVAILABLE
     
-    df = add_component_scores(pd.read_csv(DATA_PATH))
+    models_dir = "models"
+    
+    try:
+        # Load meta model
+        with open(os.path.join(models_dir, "meta_model.pkl"), "rb") as f:
+            meta_data = pickle.load(f)
+            meta_model = meta_data["model"]
+        
+        # Load component models
+        component_names = ["digital_trust", "resilience", "adaptability", "language_sentiment"]
+        for name in component_names:
+            with open(os.path.join(models_dir, f"{name}_model.pkl"), "rb") as f:
+                models[name] = pickle.load(f)
+        
+        # Load representation features and scaler
+        with open(os.path.join(models_dir, "rep_features_and_embeds.pkl"), "rb") as f:
+            rep_data = pickle.load(f)
+            rep_features = rep_data["rep_features"]
+            Z_cols = rep_data["Z_cols"]
+            scaler_rep = rep_data["scaler_rep"]
+        
+        print("All models loaded successfully!")
+        return True
+        
+    except Exception as e:
+        print(f"Error loading models: {e}")
+        return False
 
-    base_models = {}
-    base_eval = {}
-
-    for name, cfg in model_configs.items():
-        features = model_feature_map()[name]
-        X = df[features]
-        y = df[cfg["target"]]
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.2, random_state=42
-        )
-
-        if cfg["model_type"] == "Lasso":
-            model = Lasso(alpha=0.01, random_state=42)
-            model.fit(X_train, y_train)
-        elif cfg["model_type"] == "XGBoost_Grid":
-            xgb = XGBRegressor(random_state=42, verbosity=0)
-            param_grid = {
-                "n_estimators": [50, 100],
-                "max_depth": [3, 5],
-                "learning_rate": [0.05, 0.1]
-            }
-            gs = GridSearchCV(
-                xgb, param_grid, cv=3,
-                scoring=make_scorer(r2_score),
-                n_jobs=-1
-            )
-            gs.fit(X_train, y_train)
-            model = gs.best_estimator_
+def get_embeddings(user_data):
+    """Generate embeddings for user data"""
+    global encoder, pca, AE_AVAILABLE
+    
+    # Ensure all rep_features columns exist
+    user_df = pd.DataFrame([user_data])
+    for c in rep_features:
+        if c not in user_df.columns:
+            user_df[c] = 0.0
+    
+    # Scale the data
+    user_scaled = scaler_rep.transform(user_df[rep_features].replace([np.inf, -np.inf], np.nan).fillna(0.0))
+    
+    # Try to use autoencoder if available, fallback to PCA
+    try:
+        if AE_AVAILABLE and encoder is not None:
+            user_Z = encoder.predict(user_scaled)
         else:
-            model = XGBRegressor(
-                n_estimators=200, max_depth=3, learning_rate=0.07,
-                subsample=0.7, random_state=42, verbosity=0
-            )
-            model.fit(X_train, y_train)
+            # Use PCA fallback
+            if pca is None:
+                from sklearn.decomposition import PCA
+                pca = PCA(n_components=len(Z_cols))
+                # We need to fit on some data - using zeros as fallback
+                dummy_data = np.zeros((10, len(rep_features)))
+                pca.fit(dummy_data)
+            user_Z = pca.transform(user_scaled)
+    except Exception as e:
+        print(f"Error in embeddings: {e}")
+        # Fallback to zeros
+        user_Z = np.zeros((1, len(Z_cols)))
+    
+    return user_Z
 
-        base_models[name] = model
-        y_pred = model.predict(X_test)
-        rmse = float(np.sqrt(mean_squared_error(y_test, y_pred)))
-        r2 = float(r2_score(y_test, y_pred))
-        base_eval[name] = {"rmse": rmse, "r2": r2}
+def predict_score(user_input):
+    """Predict AltiCred score for a user"""
+    try:
+        # Get embeddings
+        user_Z = get_embeddings(user_input)
+        user_embed = pd.DataFrame(user_Z, columns=Z_cols)
+        
+        # Create full user dataframe
+        user_df = pd.DataFrame([user_input])
+        user_full = pd.concat([user_df, user_embed], axis=1)
+        
+        # Predict components
+        base_preds = {}
+        component_scores = {}
+        
+        for name, obj in models.items():
+            feats = obj["features"]
+            # Ensure missing features are present
+            for f in feats:
+                if f not in user_full.columns:
+                    user_full[f] = 0.0
+            
+            pred = obj["model"].predict(user_full[feats])[0]
+            clipped_pred = float(np.clip(pred, 0, 1))
+            base_preds[f"{name}_pred"] = clipped_pred
+            component_scores[name] = clipped_pred
+        
+        # Meta prediction
+        meta_input = pd.DataFrame([base_preds])
+        # Ensure all required columns are present
+        required_cols = ["digital_trust_pred", "resilience_pred", "adaptability_pred", "language_sentiment_pred"]
+        for col in required_cols:
+            if col not in meta_input.columns:
+                meta_input[col] = 0.0
+        
+        final_score = float(np.clip(meta_model.predict(meta_input[required_cols])[0], 0, 1))
+        
+        return {
+            "final_score": final_score,
+            "component_scores": component_scores,
+            "success": True
+        }
+        
+    except Exception as e:
+        print(f"Prediction error: {e}")
+        return {
+            "error": str(e),
+            "success": False
+        }
 
-        out_img = STATIC_IMG_DIR / f"{name}_importance.png"
-        plot_feature_importance(model, features, out_img, f"{name} importance")
+def get_interpretation(score):
+    """Get human-readable interpretation of the score"""
+    if score >= 0.8:
+        return "Excellent creditworthiness"
+    elif score >= 0.6:
+        return "Good creditworthiness"
+    elif score >= 0.4:
+        return "Fair creditworthiness — manual review recommended"
+    else:
+        return "Higher risk — careful evaluation required"
 
-    meta_df = pd.DataFrame(index=df.index)
-    for name, m in base_models.items():
-        meta_df[f"{name}_pred"] = m.predict(df[model_feature_map()[name]])
-
-    df["final_behavioral_score"] = (
-        df["digital_trust_graph_score"] * 0.25
-        + df["resilience_recovery_score"] * 0.30
-        + df["adaptability_score"] * 0.25
-        + df["language_sentiment_score"] * 0.20
-    )
-
-    X_meta = meta_df
-    y_meta = df["final_behavioral_score"]
-    X_train_m, X_test_m, y_train_m, y_test_m = train_test_split(
-        X_meta, y_meta, test_size=0.2, random_state=42
-    )
-    meta_model = Ridge(alpha=1.0, random_state=42)
-    meta_model.fit(X_train_m, y_train_m)
-    y_pred_meta = meta_model.predict(X_test_m)
-    meta_eval = {
-        "rmse": float(np.sqrt(mean_squared_error(y_test_m, y_pred_meta))),
-        "r2": float(r2_score(y_test_m, y_pred_meta))
-    }
-
-    payload = {
-        "base_models": base_models,
-        "meta_model": meta_model,
-        "base_eval": base_eval,
-        "meta_eval": meta_eval
-    }
-    joblib.dump(payload, MODELS_PATH)
-    print("Models saved.")
-    return payload
-
-MODELS = train_and_save_models()
-
-# -------------------------
-# Routes
-# -------------------------
-@app.route("/")
+@app.route('/')
 def index():
-    images = sorted([p.name for p in STATIC_IMG_DIR.glob("*.png")])
-    return render_template(
-        "index3.html",
-        images=images,
-        base_eval=MODELS["base_eval"],
-        meta_eval=MODELS["meta_eval"]
-    )
+    return render_template('index3.html')
 
-@app.route("/predict", methods=["POST"])
+@app.route('/predict', methods=['POST'])
 def predict():
-    payload = request.get_json(force=True)
-    mode = payload.get("mode", "full")
-    user_data = payload.get("user_data", {})
-
-    df_ref = pd.read_csv(DATA_PATH)
-
-    # Only keep features used in models
-    model_feats = sorted({f for feats in model_feature_map().values() for f in feats})
-    df_ref = df_ref[model_feats]
-
-    sample = {}
-    for feat in df_ref.columns:
-        val = user_data.get(feat, None)
-        if val is None or str(val) == "":
-            if pd.api.types.is_numeric_dtype(df_ref[feat]):
-                sample[feat] = float(df_ref[feat].median())
-            else:
-                sample[feat] = df_ref[feat].mode()[0]
-        else:
+    try:
+        # Get form data
+        user_input = {}
+        
+        # Primary questions mapping
+        form_to_feature = {
+            'land_size': 'land_size_acres',
+            'in_cooperative': 'in_cooperative',
+            'linked_to_exporter': 'linked_to_exporter',
+            'agritech_usage': 'agritech_tool_usage',
+            'new_crop_adoption': 'new_crop_adoption_flag',
+            'pm_kisan_installments': 'pm_kisan_installments_received',
+            'crop_diversity': 'crop_diversity',
+            'digital_engagement': 'digital_network_engagement_value',
+            'market_access': 'market_access_value',
+            'budgeting_habit': 'budgeting_habit_value'
+        }
+        
+        # Process form inputs
+        for form_key, feature_name in form_to_feature.items():
+            value = request.form.get(form_key, '0').strip()
             try:
-                sample[feat] = float(val)
+                user_input[feature_name] = float(value) if value else 0.0
             except ValueError:
-                sample[feat] = val  # leave as string if needed
+                user_input[feature_name] = 0.0
+        
+        # Add derived features with defaults
+        user_input['irrigation_proxy'] = 0.0
+        user_input['reliable_contacts_count'] = user_input.get('digital_network_engagement_value', 0) * 10
+        user_input['social_connections_count'] = user_input.get('digital_network_engagement_value', 0) * 15
+        user_input['proximity_to_defaulters_score'] = 0.1
+        user_input['support_request_frequency'] = 0.1
+        user_input['time_to_resume_upi_after_shock'] = 2.0
+        user_input['emi_status_last_12_months'] = 0.1
+        user_input['overdraft_usage_frequency'] = 0.1
+        user_input['loan_repayments_done'] = 0.8
+        user_input['yield_recovered_units'] = 0.7
+        user_input['income_volatility_value'] = 0.3
+        
+        # Make prediction
+        result = predict_score(user_input)
+        
+        if result['success']:
+            interpretation = get_interpretation(result['final_score'])
+            return jsonify({
+                'success': True,
+                'final_score': round(result['final_score'], 4),
+                'component_scores': {k: round(v, 4) for k, v in result['component_scores'].items()},
+                'interpretation': interpretation
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': result['error']
+            })
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
 
-    sample_df = pd.DataFrame([sample])
-
-    base_preds = {}
-    for name, model in MODELS["base_models"].items():
-        feats = model_feature_map()[name]
-        pred = model.predict(sample_df[feats])[0]
-        base_preds[f"{name}_pred"] = float(pred)
-
-    if mode == "component":
-        comp = payload.get("component", None)
-        if comp not in MODELS["base_models"]:
-            return jsonify({"error": "Invalid component requested"}), 400
-        return jsonify({"component": comp, "score": base_preds[f"{comp}_pred"]})
-
-    meta_input = pd.DataFrame([base_preds])
-    final_score = float(MODELS["meta_model"].predict(meta_input)[0])
-
+@app.route('/health')
+def health_check():
+    """Health check endpoint"""
     return jsonify({
-        "alticred_score": final_score,
-        "base_preds": base_preds,
-        "images": [url_for("static", filename=f"images/{fn}") for fn in sorted(os.listdir(STATIC_IMG_DIR))],
-        "base_eval": MODELS["base_eval"],
-        "meta_eval": MODELS["meta_eval"],
+        'status': 'healthy',
+        'models_loaded': len(models) > 0 and meta_model is not None
     })
 
-@app.route("/static/images/<path:filename>")
-def serve_img(filename):
-    return send_from_directory(STATIC_IMG_DIR, filename)
-
-if __name__ == "__main__":
-    app.run(debug=True)
+if __name__ == '__main__':
+    port = int(os.environ.get("PORT", 5000))  # use Render's assigned port, fallback to 5000 locally
+    if not load_models():
+        print("Warning: Models not loaded. Please ensure models/ directory exists with trained models.")
+        print("Run train_alticred.py first to generate the models.")
+    app.run(debug=False, host='0.0.0.0', port=port)
