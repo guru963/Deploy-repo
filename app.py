@@ -5,13 +5,10 @@ import pandas as pd
 import numpy as np
 import sys
 
-# Add the models directory to the Python path
 sys.path.insert(0, './models')
 
 # Import your scorer classes
 from alticred_salaried import AltiCredScorer as SalariedScorer
-# from alticred_self_employed import AltiCredScorer as SelfEmployedScorer
-# from alticred_student import AltiCredScorer as StudentScorer
 
 # --- Initialize the Flask App ---
 app = Flask(__name__)
