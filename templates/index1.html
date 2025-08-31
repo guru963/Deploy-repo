@@ -2,375 +2,312 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Adaptability Score Calculator</title>
+    <title>AltiCred: Student Adaptability Score</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+
+    {% if shap_js %}
+        <script>{{ shap_js | safe }}</script>
+    {% endif %}
+
     <style>
         :root {
-        --bg-color: #fafbfc;
-        --primary-accent: #3b82f6;
-        --secondary-accent: #1e40af;
-        --accent-hover: #2563eb;
-        --text-primary: #1f2937;
-        --text-secondary: #6b7280;
-        --text-muted: #9ca3af;
-        --white: #ffffff;
-        --light-gray: #f8fafc;
-        --card-bg: rgba(255, 255, 255, 0.8);
-        --card-border: rgba(59, 130, 246, 0.1);
-        --card-hover-bg: rgba(255, 255, 255, 0.95);
-        --input-bg: rgba(248, 250, 252, 0.9);
-        --input-border: rgba(59, 130, 246, 0.15);
-        --input-focus-bg: rgba(255, 255, 255, 0.95);
-        --shadow-soft: rgba(0, 0, 0, 0.04);
-        --shadow-medium: rgba(59, 130, 246, 0.08);
-        --gradient-primary: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-        --gradient-subtle: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-        --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif;
-    }
-
-    body {
-        margin: 0;
-        font-family: var(--font-family);
-        background: var(--gradient-subtle);
-        color: var(--text-primary);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        min-height: 100vh;
-        line-height: 1.6;
-    }
-
-    /* Subtle pattern overlay for premium feel */
-    body::before {
-        content: '';
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-image: 
-            radial-gradient(circle at 25% 25%, rgba(59, 130, 246, 0.02) 0%, transparent 50%),
-            radial-gradient(circle at 75% 75%, rgba(29, 78, 216, 0.015) 0%, transparent 50%);
-        pointer-events: none;
-        z-index: 1;
-    }
-
-    header {
-        background: var(--gradient-primary);
-        width: 100%;
-        padding: 24px 0;
-        text-align: center;
-        box-shadow: 
-            0 8px 16px var(--shadow-medium),
-            0 4px 8px var(--shadow-soft);
-        position: relative;
-        z-index: 10;
-    }
-
-    header h1 {
-        margin: 0;
-        font-size: 2.2rem;
-        font-weight: 700;
-        letter-spacing: -0.02em;
-        color: var(--white);
-        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    form {
-        background: var(--card-bg);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        padding: 40px;
-        border-radius: 20px;
-        width: 90%;
-        max-width: 520px;
-        margin-top: 40px;
-        box-shadow: 
-            0 20px 40px var(--shadow-soft),
-            0 8px 16px var(--shadow-medium),
-            inset 0 1px 0 rgba(255, 255, 255, 0.9);
-        border: 1px solid rgba(255, 255, 255, 0.8);
-        position: relative;
-        z-index: 10;
-    }
-
-    label {
-        display: block;
-        margin-top: 20px;
-        margin-bottom: 8px;
-        font-weight: 600;
-        color: var(--text-primary);
-        font-size: 1em;
-        letter-spacing: -0.01em;
-    }
-
-    label:first-of-type {
-        margin-top: 0;
-    }
-
-    input, select {
-        width: 100%;
-        padding: 14px 16px;
-        margin: 0;
-        border: 1px solid var(--input-border);
-        border-radius: 12px;
-        background: var(--input-bg);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        color: var(--text-primary);
-        font-size: 15px;
-        font-family: var(--font-family);
-        font-weight: 500;
-        outline: none;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        box-sizing: border-box;
-        box-shadow: 0 2px 4px var(--shadow-soft);
-    }
-
-    input:focus, select:focus {
-        background: var(--input-focus-bg);
-        border-color: var(--primary-accent);
-        box-shadow: 
-            0 0 0 3px rgba(59, 130, 246, 0.1),
-            0 4px 8px var(--shadow-soft);
-        transform: translateY(-1px);
-    }
-
-    input:hover, select:hover {
-        border-color: rgba(59, 130, 246, 0.25);
-        background: rgba(255, 255, 255, 0.95);
-    }
-
-    select {
-        cursor: pointer;
-        appearance: none;
-        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-        background-position: right 12px center;
-        background-repeat: no-repeat;
-        background-size: 16px;
-        padding-right: 40px;
-    }
-
-    button {
-        margin-top: 32px;
-        width: 100%;
-        padding: 16px 24px;
-        border: none;
-        background: var(--gradient-primary);
-        color: var(--white);
-        font-size: 16px;
-        font-weight: 600;
-        font-family: var(--font-family);
-        border-radius: 12px;
-        cursor: pointer;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        letter-spacing: 0.01em;
-        position: relative;
-        overflow: hidden;
-        box-shadow: 
-            0 8px 16px rgba(59, 130, 246, 0.2),
-            0 4px 8px rgba(59, 130, 246, 0.1),
-            inset 0 1px 0 rgba(255, 255, 255, 0.2);
-    }
-
-    button::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
-        transition: left 0.6s;
-    }
-
-    button:hover::before {
-        left: 100%;
-    }
-
-    button:hover {
-        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-        transform: translateY(-2px);
-        box-shadow: 
-            0 12px 24px rgba(59, 130, 246, 0.25),
-            0 6px 12px rgba(59, 130, 246, 0.15),
-            inset 0 1px 0 rgba(255, 255, 255, 0.3);
-    }
-
-    button:active {
-        transform: translateY(-1px);
-        box-shadow: 
-            0 6px 12px rgba(59, 130, 246, 0.2),
-            0 3px 6px rgba(59, 130, 246, 0.1),
-            inset 0 1px 0 rgba(255, 255, 255, 0.2);
-    }
-
-    button:focus {
-        outline: none;
-        box-shadow: 
-            0 8px 16px rgba(59, 130, 246, 0.2),
-            0 4px 8px rgba(59, 130, 246, 0.1),
-            0 0 0 3px rgba(59, 130, 246, 0.3);
-    }
-
-    .result {
-        margin-top: 40px;
-        padding: 32px;
-        border-radius: 20px;
-        background: var(--card-bg);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        text-align: center;
-        font-size: 1.1rem;
-        font-weight: 500;
-        width: 90%;
-        max-width: 520px;
-        box-shadow: 
-            0 20px 40px var(--shadow-soft),
-            0 8px 16px var(--shadow-medium),
-            inset 0 1px 0 rgba(255, 255, 255, 0.9);
-        border: 1px solid rgba(255, 255, 255, 0.8);
-        color: var(--text-secondary);
-        position: relative;
-        z-index: 10;
-        animation: fadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    @keyframes fadeIn {
-        from { 
-            opacity: 0; 
-            transform: translateY(20px); 
+            --bg-color: #fafbfc;
+            --primary-accent: #3b82f6;
+            --secondary-accent: #1e40af;
+            --accent-hover: #2563eb;
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --text-muted: #9ca3af;
+            --white: #ffffff;
+            --light-gray: #f8fafc;
+            --card-bg: rgba(255, 255, 255, 0.8);
+            --card-border: rgba(59, 130, 246, 0.1);
+            --card-hover-bg: rgba(255, 255, 255, 0.95);
+            --input-bg: rgba(248, 250, 252, 0.9);
+            --input-border: rgba(59, 130, 246, 0.15);
+            --input-focus-bg: rgba(255, 255, 255, 0.95);
+            --shadow-soft: rgba(0, 0, 0, 0.04);
+            --shadow-medium: rgba(59, 130, 246, 0.08);
+            --gradient-primary: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            --gradient-subtle: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif;
         }
-        to { 
-            opacity: 1; 
-            transform: translateY(0); 
+
+        body {
+            margin: 0;
+            font-family: var(--font-family);
+            background: var(--gradient-subtle);
+            color: var(--text-primary);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            line-height: 1.6;
         }
-    }
 
-    .score-number {
-        font-size: 2.5rem;
-        background: var(--gradient-primary);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        font-weight: 700;
-        letter-spacing: -0.02em;
-        margin: 16px 0;
-        display: inline-block;
-        text-shadow: none;
-    }
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle at 25% 25%, rgba(59, 130, 246, 0.02) 0%, transparent 50%),
+                radial-gradient(circle at 75% 75%, rgba(29, 78, 216, 0.015) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 1;
+        }
 
-    footer {
-        margin-top: auto;
-        padding: 20px;
-        font-size: 0.9rem;
-        color: var(--text-muted);
-        font-weight: 500;
-        position: relative;
-        z-index: 10;
-    }
+        header {
+            background: var(--gradient-primary);
+            width: 100%;
+            padding: 24px 0;
+            text-align: center;
+            box-shadow: 
+                0 8px 16px var(--shadow-medium),
+                0 4px 8px var(--shadow-soft);
+            position: relative;
+            z-index: 10;
+        }
 
-    /* Enhanced responsive design */
-    @media (max-width: 768px) {
         header h1 {
-            font-size: 1.8rem;
+            margin: 0;
+            font-size: 2.2rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: var(--white);
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
         form {
-            padding: 32px 24px;
-            margin: 32px 16px;
-            width: calc(100% - 32px);
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            padding: 40px;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 520px;
+            margin-top: 20px; /* Reduced margin */
+            box-shadow: 
+                0 20px 40px var(--shadow-soft),
+                0 8px 16px var(--shadow-medium),
+                inset 0 1px 0 rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            position: relative;
+            z-index: 10;
         }
 
-        .result {
-            padding: 24px;
-            margin: 32px 16px;
-            width: calc(100% - 32px);
+        label {
+            display: block;
+            margin-top: 20px;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 1em;
+            letter-spacing: -0.01em;
         }
 
-        .score-number {
-            font-size: 2.2rem;
-        }
-
-        input, select {
-            padding: 12px 14px;
-        }
-
-        button {
-            padding: 14px 20px;
-        }
-    }
-
-    /* Reduced motion support */
-    @media (prefers-reduced-motion: reduce) {
-        button::before {
-            transition: none;
-        }
-
-        button:hover::before {
-            display: none;
-        }
-
-        .result {
-            animation: none;
-        }
-
-        * {
-            animation-duration: 0.01ms !important;
-            animation-iteration-count: 1 !important;
-            transition-duration: 0.01ms !important;
-        }
-    }
-
-    /* High contrast mode support */
-    @media (prefers-contrast: high) {
-        :root {
-            --card-border: rgba(59, 130, 246, 0.3);
-            --input-border: rgba(59, 130, 246, 0.3);
+        label:first-of-type {
+            margin-top: 0;
         }
 
         input, select {
-            border-width: 2px;
+            width: 100%;
+            padding: 14px 16px;
+            margin: 0;
+            border: 1px solid var(--input-border);
+            border-radius: 12px;
+            background: var(--input-bg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            color: var(--text-primary);
+            font-size: 15px;
+            font-family: var(--font-family);
+            font-weight: 500;
+            outline: none;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-sizing: border-box;
+            box-shadow: 0 2px 4px var(--shadow-soft);
         }
 
         input:focus, select:focus {
-            border-width: 2px;
+            background: var(--input-focus-bg);
+            border-color: var(--primary-accent);
             box-shadow: 
-                0 0 0 3px rgba(59, 130, 246, 0.3),
+                0 0 0 3px rgba(59, 130, 246, 0.1),
                 0 4px 8px var(--shadow-soft);
+            transform: translateY(-1px);
         }
-    }
-        #pdf-upload {
-            display: inline-block;
-            padding: 10px 20px;
-            font-size: 14px;
-            font-weight: 600;
-            color: #ffffff;
-            background-color: #007bff;
-            border: none;
-            border-radius: 6px;
+
+        input:hover, select:hover {
+            border-color: rgba(59, 130, 246, 0.25);
+            background: rgba(255, 255, 255, 0.95);
+        }
+
+        select {
             cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 12px center;
+            background-repeat: no-repeat;
+            background-size: 16px;
+            padding-right: 40px;
         }
-        #pdf-upload:hover {
-            background-color: #0056b3;
+
+        button {
+            margin-top: 32px;
+            width: 100%;
+            padding: 16px 24px;
+            border: none;
+            background: var(--gradient-primary);
+            color: var(--white);
+            font-size: 16px;
+            font-weight: 600;
+            font-family: var(--font-family);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            letter-spacing: 0.01em;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 
+                0 8px 16px rgba(59, 130, 246, 0.2),
+                0 4px 8px rgba(59, 130, 246, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
         }
+
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+            transition: left 0.6s;
+        }
+
+        button:hover::before {
+            left: 100%;
+        }
+
+        button:hover {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            transform: translateY(-2px);
+            box-shadow: 
+                0 12px 24px rgba(59, 130, 246, 0.25),
+                0 6px 12px rgba(59, 130, 246, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        }
+
+        .upload-section {
+            margin-top: 40px;
+            text-align: center;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .upload-label {
+            display: inline-block;
+            padding: 12px 20px;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--primary-accent);
+            background-color: var(--white);
+            border: 1px solid var(--primary-accent);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .upload-label:hover {
+            background-color: var(--primary-accent);
+            color: var(--white);
+        }
+        
+        .result, .explanation {
+            margin-top: 40px;
+            padding: 32px;
+            border-radius: 20px;
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            text-align: center;
+            font-size: 1.1rem;
+            font-weight: 500;
+            width: 90%;
+            max-width: 520px;
+            box-shadow: 
+                0 20px 40px var(--shadow-soft),
+                0 8px 16px var(--shadow-medium),
+                inset 0 1px 0 rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            color: var(--text-secondary);
+            position: relative;
+            z-index: 10;
+            animation: fadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .explanation {
+            max-width: 900px;
+            overflow-x: auto;
+        }
+
+        .explanation h2 {
+            margin-top: 0;
+            font-size: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        @keyframes fadeIn {
+            from { 
+                opacity: 0; 
+                transform: translateY(20px); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0); 
+            }
+        }
+
+        .score-number {
+            font-size: 2.5rem;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin: 16px 0;
+            display: inline-block;
+            text-shadow: none;
+        }
+        
+        /* ... other styles remain the same ... */
+
     </style>
 </head>
 <body>
 
 <header>
-    <h1> Adaptability Score Calculator </h1>
+    <h1>AltiCred: Student Adaptability Score</h1>
 </header>
 
-<!-- PDF Upload -->
-<input type="file" id="pdf-upload" accept="application/pdf">
+<div class="upload-section">
+    <label for="pdf-upload" class="upload-label">Auto-fill from Resume (PDF)</label>
+    <input type="file" id="pdf-upload" accept="application/pdf">
+</div>
 
 <form method="POST">
-    <label>Location</label>
+    <label>Location (e.g., Rural, Tier 1 (Urban))</label>
     <input type="text" name="location" required>
 
     <label>Type of Institution</label>
     <select name="institution_type" required>
+        <option value="" disabled selected>Select an option</option>
         <option value="Govt">Govt</option>
         <option value="Private">Private</option>
     </select>
@@ -380,6 +317,7 @@
 
     <label>Scholarships Awards (Yes/No)</label>
     <select name="scholarship" required>
+        <option value="" disabled selected>Select an option</option>
         <option value="Yes">Yes</option>
         <option value="No">No</option>
     </select>
@@ -396,10 +334,10 @@
     <label>Ongoing Certification Courses</label>
     <input type="number" name="ongoing_courses" required>
 
-    <label>Achievement Level (1-5)</label>
-    <input type="number" min="1" max="5" name="achievement" required>
+    <label>Achievement Level (0-5)</label>
+    <input type="number" min="0" max="5" name="achievement" required>
 
-    <label>Student Highlight</label>
+    <label>Student Highlight (e.g., Startup Founder, Innovator)</label>
     <input type="text" name="highlight" required>
 
     <label>Median Packages (LPA)</label>
@@ -409,50 +347,64 @@
 </form>
 
 {% if score is not none %}
-    <div class="score-number">{{ "%.4f"|format(score) }}</div>
-{% else %}
-    <div class="score-number">No score yet</div>
+<div class="result">
+    {% if score is string %}
+        {{ score }}
+    {% else %}
+        Your <span class="score-number">Adaptability Score</span> is:
+        <div class="score-number">{{ "%.4f" | format(score) }}</div>
+    {% endif %}
+</div>
 {% endif %}
 
+{% if shap_plot_html %}
+<div class="explanation">
+    <h2>Prediction Explanation</h2>
+    {{ shap_plot_html | safe }}
+</div>
+{% endif %}
 
 <script>
 document.getElementById('pdf-upload').addEventListener('change', async function(event) {
     const file = event.target.files[0];
     if (!file) return;
 
+    // Optional: Add a loading indicator
+    document.querySelector('.upload-label').textContent = 'Processing...';
+
     const reader = new FileReader();
     reader.onload = async function(e) {
         const typedarray = new Uint8Array(e.target.result);
+        
+        // Set the workerSrc for pdf.js
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js`;
+
         const pdf = await pdfjsLib.getDocument(typedarray).promise;
 
         let textContent = '';
         for (let i = 1; i <= pdf.numPages; i++) {
             const page = await pdf.getPage(i);
             const text = await page.getTextContent();
-            text.items.forEach(item => {
-                textContent += item.str + ' ';
-            });
+            textContent += text.items.map(item => item.str).join(' ');
         }
 
         // Normalize text for easier regex matching
         textContent = textContent.replace(/\s+/g, ' ').trim();
 
-        // Mapping PDF fields to form fields
         const mappings = {
-            location: /Location:\s*([^:]+?)(?=\s*(?:Type of Institution|Attendance Rate|Scholarships Awards|GPA|Stipend Allowance Amount|Internship Income|Ongoing Certification Courses|Achievement Level|Student Highlight|Median Packages):|$)/i,
-            institution_type: /Type of Institution:\s*([^:]+?)(?=\s*(?:Location|Attendance Rate|Scholarships Awards|GPA|Stipend Allowance Amount|Internship Income|Ongoing Certification Courses|Achievement Level|Student Highlight|Median Packages):|$)/i,
-            attendance: /Attendance Rate.*?:\s*([0-9.]+)/i,
+            location: /Location:\s*([^\n:]+)/i,
+            institution_type: /Institution Type:\s*(Govt|Private)/i,
+            attendance: /Attendance Rate:\s*([0-9.]+)/i,
             scholarship: /Scholarships Awards:\s*(Yes|No)/i,
             gpa: /GPA:\s*([0-9.]+)/i,
-            stipend: /Stipend Allowance Amount:\s*([0-9.]+)/i,
-            internship_income: /Internship Income:\s*([0-9.]+)/i,
-            ongoing_courses: /Ongoing Certification Courses:\s*([0-9]+)/i,
-            achievement: /Achievement Level:\s*([0-9]+)/i,
-            highlight: /Student Highlight:\s*(.+?)(?=\s*Median Packages|$)/i,
+            stipend: /Stipend.*?:\s*([0-9.]+)/i,
+            internship_income: /Internship.*?Income:\s*([0-9.]+)/i,
+            ongoing_courses: /Ongoing.*?Courses:\s*([0-9]+)/i,
+            achievement: /Achievement Level:\s*([0-5])/i,
+            highlight: /Student Highlight:\s*([^\n:]+)/i,
             median_package: /Median Packages.*?:\s*([0-9.]+)/i
         };
 
-        // Autofill form fields
         for (const [field, regex] of Object.entries(mappings)) {
             const match = textContent.match(regex);
             if (match) {
@@ -462,6 +414,9 @@ document.getElementById('pdf-upload').addEventListener('change', async function(
                 }
             }
         }
+        
+        // Reset button text after processing
+        document.querySelector('.upload-label').textContent = 'Auto-fill from Resume (PDF)';
     };
 
     reader.readAsArrayBuffer(file);
