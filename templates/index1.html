@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <title>Adaptability Score Calculator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
     <style>
-    :root {
+        :root {
         --bg-color: #fafbfc;
         --primary-accent: #3b82f6;
         --secondary-accent: #1e40af;
@@ -339,6 +340,20 @@
                 0 4px 8px var(--shadow-soft);
         }
     }
+        #pdf-upload {
+            display: inline-block;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #ffffff;
+            background-color: #007bff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        #pdf-upload:hover {
+            background-color: #0056b3;
+        }
     </style>
 </head>
 <body>
@@ -346,6 +361,9 @@
 <header>
     <h1> Adaptability Score Calculator </h1>
 </header>
+
+<!-- PDF Upload -->
+<input type="file" id="pdf-upload" accept="application/pdf">
 
 <form method="POST">
     <label>Location</label>
@@ -397,6 +415,58 @@
 {% endif %}
 
 
+<script>
+document.getElementById('pdf-upload').addEventListener('change', async function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        const typedarray = new Uint8Array(e.target.result);
+        const pdf = await pdfjsLib.getDocument(typedarray).promise;
+
+        let textContent = '';
+        for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const text = await page.getTextContent();
+            text.items.forEach(item => {
+                textContent += item.str + ' ';
+            });
+        }
+
+        // Normalize text for easier regex matching
+        textContent = textContent.replace(/\s+/g, ' ').trim();
+
+        // Mapping PDF fields to form fields
+        const mappings = {
+            location: /Location:\s*([^:]+?)(?=\s*(?:Type of Institution|Attendance Rate|Scholarships Awards|GPA|Stipend Allowance Amount|Internship Income|Ongoing Certification Courses|Achievement Level|Student Highlight|Median Packages):|$)/i,
+            institution_type: /Type of Institution:\s*([^:]+?)(?=\s*(?:Location|Attendance Rate|Scholarships Awards|GPA|Stipend Allowance Amount|Internship Income|Ongoing Certification Courses|Achievement Level|Student Highlight|Median Packages):|$)/i,
+            attendance: /Attendance Rate.*?:\s*([0-9.]+)/i,
+            scholarship: /Scholarships Awards:\s*(Yes|No)/i,
+            gpa: /GPA:\s*([0-9.]+)/i,
+            stipend: /Stipend Allowance Amount:\s*([0-9.]+)/i,
+            internship_income: /Internship Income:\s*([0-9.]+)/i,
+            ongoing_courses: /Ongoing Certification Courses:\s*([0-9]+)/i,
+            achievement: /Achievement Level:\s*([0-9]+)/i,
+            highlight: /Student Highlight:\s*(.+?)(?=\s*Median Packages|$)/i,
+            median_package: /Median Packages.*?:\s*([0-9.]+)/i
+        };
+
+        // Autofill form fields
+        for (const [field, regex] of Object.entries(mappings)) {
+            const match = textContent.match(regex);
+            if (match) {
+                const input = document.querySelector(`[name="${field}"]`);
+                if (input) {
+                    input.value = match[1].trim();
+                }
+            }
+        }
+    };
+
+    reader.readAsArrayBuffer(file);
+});
+</script>
 
 </body>
 </html>
