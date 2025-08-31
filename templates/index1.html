@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>AltiCred: Student Adaptability Score</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
-
+    
     {% if shap_js %}
         <script>{{ shap_js | safe }}</script>
     {% endif %}
@@ -35,6 +35,7 @@
 
         body {
             margin: 0;
+            padding-bottom: 40px;
             font-family: var(--font-family);
             background: var(--gradient-subtle);
             color: var(--text-primary);
@@ -56,7 +57,7 @@
                 radial-gradient(circle at 25% 25%, rgba(59, 130, 246, 0.02) 0%, transparent 50%),
                 radial-gradient(circle at 75% 75%, rgba(29, 78, 216, 0.015) 0%, transparent 50%);
             pointer-events: none;
-            z-index: 1;
+            z-index: -1;
         }
 
         header {
@@ -80,6 +81,35 @@
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
+        .upload-section {
+            margin-top: 40px;
+            text-align: center;
+            z-index: 10;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .upload-label {
+            display: inline-block;
+            padding: 12px 20px;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--primary-accent);
+            background-color: var(--white);
+            border: 1px solid var(--input-border);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px var(--shadow-soft);
+        }
+
+        .upload-label:hover {
+            background-color: rgba(59, 130, 246, 0.05);
+            border-color: var(--primary-accent);
+        }
+
         form {
             background: var(--card-bg);
             backdrop-filter: blur(20px);
@@ -88,7 +118,7 @@
             border-radius: 20px;
             width: 90%;
             max-width: 520px;
-            margin-top: 20px; /* Reduced margin */
+            margin-top: 20px;
             box-shadow: 
                 0 20px 40px var(--shadow-soft),
                 0 8px 16px var(--shadow-medium),
@@ -105,7 +135,7 @@
             font-weight: 600;
             color: var(--text-primary);
             font-size: 1em;
-            letter-spacing: -0.01em;
+            text-align: left;
         }
 
         label:first-of-type {
@@ -119,42 +149,16 @@
             border: 1px solid var(--input-border);
             border-radius: 12px;
             background: var(--input-bg);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
             color: var(--text-primary);
             font-size: 15px;
             font-family: var(--font-family);
             font-weight: 500;
             outline: none;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.3s ease;
             box-sizing: border-box;
             box-shadow: 0 2px 4px var(--shadow-soft);
         }
-
-        input:focus, select:focus {
-            background: var(--input-focus-bg);
-            border-color: var(--primary-accent);
-            box-shadow: 
-                0 0 0 3px rgba(59, 130, 246, 0.1),
-                0 4px 8px var(--shadow-soft);
-            transform: translateY(-1px);
-        }
-
-        input:hover, select:hover {
-            border-color: rgba(59, 130, 246, 0.25);
-            background: rgba(255, 255, 255, 0.95);
-        }
-
-        select {
-            cursor: pointer;
-            appearance: none;
-            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-            background-position: right 12px center;
-            background-repeat: no-repeat;
-            background-size: 16px;
-            padding-right: 40px;
-        }
-
+        
         button {
             margin-top: 32px;
             width: 100%;
@@ -164,68 +168,15 @@
             color: var(--white);
             font-size: 16px;
             font-weight: 600;
-            font-family: var(--font-family);
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            letter-spacing: 0.01em;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 
-                0 8px 16px rgba(59, 130, 246, 0.2),
-                0 4px 8px rgba(59, 130, 246, 0.1),
-                inset 0 1px 0 rgba(255, 255, 255, 0.2);
-        }
-
-        button::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
-            transition: left 0.6s;
-        }
-
-        button:hover::before {
-            left: 100%;
-        }
-
-        button:hover {
-            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-            transform: translateY(-2px);
-            box-shadow: 
-                0 12px 24px rgba(59, 130, 246, 0.25),
-                0 6px 12px rgba(59, 130, 246, 0.15),
-                inset 0 1px 0 rgba(255, 255, 255, 0.3);
-        }
-
-        .upload-section {
-            margin-top: 40px;
-            text-align: center;
-        }
-
-        input[type="file"] {
-            display: none;
-        }
-
-        .upload-label {
-            display: inline-block;
-            padding: 12px 20px;
-            font-size: 15px;
-            font-weight: 600;
-            color: var(--primary-accent);
-            background-color: var(--white);
-            border: 1px solid var(--primary-accent);
             border-radius: 12px;
             cursor: pointer;
             transition: all 0.3s ease;
         }
 
-        .upload-label:hover {
-            background-color: var(--primary-accent);
-            color: var(--white);
+        button:hover {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px rgba(59, 130, 246, 0.25);
         }
         
         .result, .explanation {
@@ -263,14 +214,8 @@
         }
 
         @keyframes fadeIn {
-            from { 
-                opacity: 0; 
-                transform: translateY(20px); 
-            }
-            to { 
-                opacity: 1; 
-                transform: translateY(0); 
-            }
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .score-number {
@@ -283,11 +228,7 @@
             letter-spacing: -0.02em;
             margin: 16px 0;
             display: inline-block;
-            text-shadow: none;
         }
-        
-        /* ... other styles remain the same ... */
-
     </style>
 </head>
 <body>
@@ -304,54 +245,54 @@
 <form method="POST">
     <label>Location (e.g., Rural, Tier 1 (Urban))</label>
     <input type="text" name="location" required>
-
+    
     <label>Type of Institution</label>
     <select name="institution_type" required>
         <option value="" disabled selected>Select an option</option>
         <option value="Govt">Govt</option>
         <option value="Private">Private</option>
     </select>
-
+    
     <label>Attendance Rate (%)</label>
     <input type="number" step="0.01" name="attendance" required>
-
+    
     <label>Scholarships Awards (Yes/No)</label>
     <select name="scholarship" required>
         <option value="" disabled selected>Select an option</option>
         <option value="Yes">Yes</option>
         <option value="No">No</option>
     </select>
-
+    
     <label>GPA</label>
     <input type="number" step="0.01" name="gpa" required>
-
+    
     <label>Stipend Allowance Amount (₹/month)</label>
     <input type="number" step="0.01" name="stipend" required>
-
+    
     <label>Internship/Part Time Job Income (₹/month)</label>
     <input type="number" step="0.01" name="internship_income" required>
-
+    
     <label>Ongoing Certification Courses</label>
     <input type="number" name="ongoing_courses" required>
-
+    
     <label>Achievement Level (0-5)</label>
     <input type="number" min="0" max="5" name="achievement" required>
-
+    
     <label>Student Highlight (e.g., Startup Founder, Innovator)</label>
     <input type="text" name="highlight" required>
-
+    
     <label>Median Packages (LPA)</label>
     <input type="number" step="0.01" name="median_package" required>
-
+    
     <button type="submit">Calculate Score</button>
 </form>
 
 {% if score is not none %}
 <div class="result">
     {% if score is string %}
-        {{ score }}
+        <p>{{ score }}</p>
     {% else %}
-        Your <span class="score-number">Adaptability Score</span> is:
+        <p>Your Adaptability Score is:</p>
         <div class="score-number">{{ "%.4f" | format(score) }}</div>
     {% endif %}
 </div>
@@ -365,62 +306,58 @@
 {% endif %}
 
 <script>
-document.getElementById('pdf-upload').addEventListener('change', async function(event) {
-    const file = event.target.files[0];
-    if (!file) return;
+    document.getElementById('pdf-upload').addEventListener('change', async function(event) {
+        const file = event.target.files[0];
+        if (!file) return;
 
-    // Optional: Add a loading indicator
-    document.querySelector('.upload-label').textContent = 'Processing...';
-
-    const reader = new FileReader();
-    reader.onload = async function(e) {
-        const typedarray = new Uint8Array(e.target.result);
+        document.querySelector('.upload-label').textContent = 'Processing...';
         
-        // Set the workerSrc for pdf.js
-        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js`;
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            const typedarray = new Uint8Array(e.target.result);
+            
+            pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js`;
 
-        const pdf = await pdfjsLib.getDocument(typedarray).promise;
+            const pdf = await pdfjsLib.getDocument(typedarray).promise;
 
-        let textContent = '';
-        for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
-            const text = await page.getTextContent();
-            textContent += text.items.map(item => item.str).join(' ');
-        }
+            let textContent = '';
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const text = await page.getTextContent();
+                textContent += text.items.map(item => item.str).join(' ');
+            }
 
-        // Normalize text for easier regex matching
-        textContent = textContent.replace(/\s+/g, ' ').trim();
+            textContent = textContent.replace(/\s+/g, ' ').trim();
 
-        const mappings = {
-            location: /Location:\s*([^\n:]+)/i,
-            institution_type: /Institution Type:\s*(Govt|Private)/i,
-            attendance: /Attendance Rate:\s*([0-9.]+)/i,
-            scholarship: /Scholarships Awards:\s*(Yes|No)/i,
-            gpa: /GPA:\s*([0-9.]+)/i,
-            stipend: /Stipend.*?:\s*([0-9.]+)/i,
-            internship_income: /Internship.*?Income:\s*([0-9.]+)/i,
-            ongoing_courses: /Ongoing.*?Courses:\s*([0-9]+)/i,
-            achievement: /Achievement Level:\s*([0-5])/i,
-            highlight: /Student Highlight:\s*([^\n:]+)/i,
-            median_package: /Median Packages.*?:\s*([0-9.]+)/i
-        };
+            const mappings = {
+                location: /Location:\s*([^\n:]+)/i,
+                institution_type: /Institution Type:\s*(Govt|Private)/i,
+                attendance: /Attendance Rate:\s*([0-9.]+)/i,
+                scholarship: /Scholarships Awards:\s*(Yes|No)/i,
+                gpa: /GPA:\s*([0-9.]+)/i,
+                stipend: /Stipend.*?:\s*([0-9.]+)/i,
+                internship_income: /Internship.*?Income:\s*([0-9.]+)/i,
+                ongoing_courses: /Ongoing.*?Courses:\s*([0-9]+)/i,
+                achievement: /Achievement Level:\s*([0-5])/i,
+                highlight: /Student Highlight:\s*([^\n:]+)/i,
+                median_package: /Median Packages.*?:\s*([0-9.]+)/i
+            };
 
-        for (const [field, regex] of Object.entries(mappings)) {
-            const match = textContent.match(regex);
-            if (match) {
-                const input = document.querySelector(`[name="${field}"]`);
-                if (input) {
-                    input.value = match[1].trim();
+            for (const [field, regex] of Object.entries(mappings)) {
+                const match = textContent.match(regex);
+                if (match) {
+                    const input = document.querySelector(`[name="${field}"]`);
+                    if (input) {
+                        input.value = match[1].trim();
+                    }
                 }
             }
-        }
-        
-        // Reset button text after processing
-        document.querySelector('.upload-label').textContent = 'Auto-fill from Resume (PDF)';
-    };
+            
+            document.querySelector('.upload-label').textContent = 'Auto-fill from Resume (PDF)';
+        };
 
-    reader.readAsArrayBuffer(file);
-});
+        reader.readAsArrayBuffer(file);
+    });
 </script>
 
 </body>
