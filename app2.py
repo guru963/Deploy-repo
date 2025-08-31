@@ -1,86 +1,60 @@
+
 from flask import Flask, render_template, request
 import pandas as pd
 import numpy as np
 import pickle
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
-from sklearn.model_selection import train_test_split
-from sklearn.compose import ColumnTransformer
-from sklearn.pipeline import Pipeline
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import roc_auc_score, accuracy_score
-import xgboost as xgb
-import lightgbm as lgb
-import warnings
+import io
+import base64
+import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg') # Non-interactive backend for Matplotlib
 
-warnings.filterwarnings('ignore')
+app = Flask(__name__, template_folder='templates') 
 
-app = Flask(__name__)
+# --- Load only the pre-trained model ONCE on startup ---
+try:
+    with open('adaptability_model.pkl', 'rb') as f:
+        MODEL_PIPELINE = pickle.load(f)
+    print("Model loaded successfully.")
+except FileNotFoundError:
+    print("\nERROR: Model file 'adaptability_model.pkl' not found.")
+    print("Please run `python3 train_model.py` first to create the model file.\n")
+    exit()
 
-class AdaptabilityScorer:
-    def __init__(self, file_path='data/modified_student_data_v2.csv'):
-        self.file_path = file_path
-        self.df = self._load_and_clean_data()
-        self._train_model()
+def create_feature_importance_plot():
+    """Creates a feature importance plot image from the trained model."""
+    model = MODEL_PIPELINE.named_steps['classifier']
+    preprocessor = MODEL_PIPELINE.named_steps['preprocessor']
+    
+    feature_names = preprocessor.get_feature_names_out()
+    importances = model.feature_importances_
+    
+    # Create a DataFrame for easy sorting
+    feature_importance_df = pd.DataFrame({
+        'feature': feature_names,
+        'importance': importances
+    }).sort_values('importance', ascending=False).head(10) # Top 10 features
+    
+    # Create plot
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.barh(feature_importance_df['feature'], feature_importance_df['importance'], color='#3b82f6')
+    ax.invert_yaxis() # Display top feature at the top
+    ax.set_title('Top 10 Most Important Features', fontsize=16)
+    ax.set_xlabel('Importance', fontsize=12)
+    plt.tight_layout()
+    
+    # Save plot to an in-memory buffer
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png')
+    buf.seek(0)
+    
+    # Encode buffer to a base64 string
+    image_base64 = base64.b64encode(buf.read()).decode('utf-8')
+    plt.close(fig)
+    return image_base64
 
-    def _load_and_clean_data(self):
-        df = pd.read_csv(self.file_path)
-        loan_history_map = {'None': 0, '1x late': 1, '2x late': 1}
-        df['is_defaulter'] = df['Education_Loan_History'].map(loan_history_map).fillna(0)
-        df.ffill(inplace=True)
-        return df
-
-    def _train_model(self):
-        numerical_features = [
-            'Attendance_Rate (%)', 'Current_Academic_Standing (GPA)',
-            'Stipend_Allowance_Amount (₹/month)', 'Internship_PartTime_Job_Income (₹/month)',
-            'Ongoing_Certification_Courses', 'Achievement_Level', 'Median_Packages (LPA)'
-        ]
-        categorical_features = [
-            'Location_Geotag (city/town/pincode)', 'Type_of_Institution',
-            'Scholarships_Awards (Yes/No)', 'Student_Highlight'
-        ]
-        all_features = numerical_features + categorical_features
-        df_adapt = self.df.dropna(subset=all_features + ['is_defaulter']).copy()
-
-        X = df_adapt[all_features]
-        y = df_adapt['is_defaulter']
-
-        preprocessor = ColumnTransformer(
-            transformers=[
-                ('num', StandardScaler(), numerical_features),
-                ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features)
-            ])
-
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.2, random_state=42, stratify=y
-        )
-
-        models = {
-            "Lasso (Logistic)": LogisticRegression(penalty='l1', solver='liblinear', random_state=42),
-            "ElasticNet (Logistic)": LogisticRegression(penalty='elasticnet', solver='saga', l1_ratio=0.5, random_state=42),
-            "XGBoost": xgb.XGBClassifier(random_state=42, use_label_encoder=False, eval_metric='logloss'),
-            "LightGBM": lgb.LGBMClassifier(random_state=42)
-        }
-
-        best_auc = -np.inf
-        for name, model in models.items():
-            pipeline = Pipeline(steps=[
-                ('preprocessor', preprocessor),
-                ('classifier', model)
-            ])
-            pipeline.fit(X_train, y_train)
-            auc = roc_auc_score(y_test, pipeline.predict_proba(X_test)[:, 1])
-            if auc > best_auc:
-                best_auc = auc
-                self.adapt_model_pipeline = pipeline
-
-    def predict(self, user_data):
-        user_df = pd.DataFrame([user_data])
-        score = self.adapt_model_pipeline.predict_proba(user_df)[0][0]
-        return np.clip(score, 0, 1)
-
-# Load and train model once
-scorer = AdaptabilityScorer()
+# Create the plot once on startup
+FEATURE_PLOT_BASE64 = create_feature_importance_plot()
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -100,10 +74,14 @@ def index():
                 'Student_Highlight': request.form['highlight'],
                 'Median_Packages (LPA)': float(request.form['median_package'])
             }
-            score = scorer.predict(user_input)
+            user_df = pd.DataFrame([user_input])
+
+            score = MODEL_PIPELINE.predict_proba(user_df)[0][0]
+
         except Exception as e:
             score = f"Error: {e}"
-    return render_template('index1.html', score=score)
+            
+    return render_template('index1.html', score=score, feature_plot=FEATURE_PLOT_BASE64)
 
 if __name__ == '__main__':
     app.run(debug=True)
