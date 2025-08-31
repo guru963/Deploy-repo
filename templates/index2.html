@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AltiCred Universal Score Calculator</title>
-    <style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AltiCred Universal Score Calculator</title>
+  <style>
         :root {
             --bg-color: #fafbfc;
             --primary-accent: #3b82f6;
@@ -456,114 +456,226 @@
             transform: none;
             background: var(--gradient-primary);
         }
+        #pdf-upload {
+  display: inline-block;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  background-color: #007bff; /* Blue */
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
+}
+
+/* Remove ugly default file input style */
+#pdf-upload::-webkit-file-upload-button {
+  visibility: hidden;
+}
+#pdf-upload::before {
+  content: "Upload PDF";
+  display: inline-block;
+  color: #fff;
+  background-color: #007bff;
+  border: 1px solid #007bff;
+  border-radius: 6px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-weight: 600;
+}
+#pdf-upload:hover::before {
+  background-color: #0056b3; /* darker blue */
+}
+#pdf-upload:active::before {
+  background-color: #004494;
+  transform: scale(0.98);
+}
+
     </style>
+
 </head>
 <body>
-    <header>
-        <h1> AltiCred Universal Score Calculator </h1>
-    </header>
+  <header>
+    <h1> AltiCred Universal Score Calculator </h1>
+  </header>
 
-    <div class="container">
-        <form id="score-form">
-            <div id="salaried-fields" class="model-fields">
-                <h2 class="form-title">Salaried Employee Details</h2>
-                <div class="form-group"><label>Connections (comma-separated):</label><input name="connections" type="text" placeholder="e.g., user_1,user_2"></div>
-                <div class="form-group"><label>Defaulter Neighbors:</label><input name="defaulter_neighbors" type="number" placeholder="e.g., 1"></div>
-                <div class="form-group"><label>Verified Neighbors:</label><input name="verified_neighbors" type="number" placeholder="e.g., 5"></div>
-                <div class="form-group"><label>Monthly Credit Bills:</label><input name="monthly_credit_bills" type="number" step="any" placeholder="e.g., 450.50"></div>
-                <div class="form-group"><label>BNPL Utilization Rate:</label><input name="bnpl_utilization_rate" type="number" step="any" placeholder="e.g., 0.25"></div>
-                <div class="form-group"><label>Mortgage Months Left:</label><input name="mortgage_months_left" type="number" placeholder="e.g., 120"></div>
-                <div class="form-group"><label>UPI Balances:</label><input name="upi_balances" type="text" placeholder="e.g., [1500, 2000]"></div>
-                <div class="form-group"><label>EMI Status Log:</label><input name="emi_status_log" type="text" placeholder="e.g., [1, 1, 0]"></div>
-                <div class="form-group"><label>Income-Expense Ratio:</label><input name="income-expense ratio" type="number" step="any" placeholder="e.g., 1.5"></div>
-                
-                <div class="form-group">
-                    <label>Owns Home (1=yes, 0=no):</label>
-                    <input id="owns-home-input" name="owns_home" type="number" placeholder="1" onchange="toggleRentField()">
-                </div>
-                
-                <div class="form-group" id="monthly-rent-group">
-                    <label>Monthly Rent:</label>
-                    <input id="monthly-rent-input" name="monthly_rent" type="number" step="any" placeholder="e.g., 200.00">
-                </div>
-
-                <div class="form-group"><label>Recovery Days:</label><input name="recovery_days" type="number" placeholder="e.g., 10"></div>
-                <div class="form-group"><label>Mortgage Status:</label><input name="mortgage_status" type="text" placeholder="e.g., ongoing"></div>
-                <div class="form-group"><label>User Posts:</label><input name="user_posts" type="text" placeholder="e.g., Had a great week, feeling positive"></div>
-            </div>
-
-            <button type="submit">Calculate Score</button>
-        </form>
-
-        <div id="result-container" class="hidden">
-             <h2 id="result"></h2>
-        </div>
-        <p id="error"></p>
+  <div class="container">
+    <!-- PDF Upload -->
+    <div class="form-group">
+      <label>Upload PDF:</label>
+      <input type="file" id="pdf-upload" accept="application/pdf" />
     </div>
 
-    <script>
-        function toggleRentField() {
-            const ownsHomeInput = document.getElementById('owns-home-input');
-            const monthlyRentGroup = document.getElementById('monthly-rent-group');
-            const monthlyRentInput = document.getElementById('monthly-rent-input');
+    <form id="score-form">
+      <div id="salaried-fields" class="model-fields">
+        <h2 class="form-title">Salaried Employee Details</h2>
+        <div class="form-group"><label>Connections (comma-separated):</label><input name="connections" type="text"></div>
+        <div class="form-group"><label>Defaulter Neighbors:</label><input name="defaulter_neighbors" type="number"></div>
+        <div class="form-group"><label>Verified Neighbors:</label><input name="verified_neighbors" type="number"></div>
+        <div class="form-group"><label>Monthly Credit Bills:</label><input name="monthly_credit_bills" type="number" step="any"></div>
+        <div class="form-group"><label>BNPL Utilization Rate:</label><input name="bnpl_utilization_rate" type="number" step="any"></div>
+        <div class="form-group"><label>Mortgage Months Left:</label><input name="mortgage_months_left" type="number"></div>
+        <div class="form-group"><label>UPI Balances:</label><input name="upi_balances" type="text"></div>
+        <div class="form-group"><label>EMI Status Log:</label><input name="emi_status_log" type="text"></div>
+        <div class="form-group"><label>Income-Expense Ratio:</label><input name="income-expense ratio" type="number" step="any"></div>
+        
+        <div class="form-group">
+          <label>Owns Home (1=yes, 0=no):</label>
+          <input id="owns-home-input" name="owns_home" type="number" onchange="toggleRentField()">
+        </div>
+        
+        <div class="form-group" id="monthly-rent-group">
+          <label>Monthly Rent:</label>
+          <input id="monthly-rent-input" name="monthly_rent" type="number" step="any">
+        </div>
 
-            if (ownsHomeInput.value === '1') {
-                monthlyRentGroup.classList.add('hidden');
-                monthlyRentInput.value = '0';
-            } else {
-                monthlyRentGroup.classList.remove('hidden');
-            }
+        <div class="form-group"><label>Recovery Days:</label><input name="recovery_days" type="number"></div>
+        <div class="form-group"><label>Mortgage Status:</label><input name="mortgage_status" type="text"></div>
+        <div class="form-group"><label>User Posts:</label><input name="user_posts" type="text"></div>
+      </div>
+
+      <button type="submit">Calculate Score</button>
+    </form>
+
+    <div id="result-container" class="hidden">
+      <h2 id="result"></h2>
+    </div>
+    <p id="error"></p>
+  </div>
+
+  <!-- Load PDF.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    function toggleRentField() {
+      const ownsHomeInput = document.getElementById('owns-home-input');
+      const monthlyRentGroup = document.getElementById('monthly-rent-group');
+      const monthlyRentInput = document.getElementById('monthly-rent-input');
+
+      if (ownsHomeInput.value === '1') {
+        monthlyRentGroup.classList.add('hidden');
+        monthlyRentInput.value = '0';
+      } else {
+        monthlyRentGroup.classList.remove('hidden');
+      }
+    }
+
+    // Parse PDF and autofill form
+    document.getElementById('pdf-upload').addEventListener('change', async function(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = async function() {
+        const typedArray = new Uint8Array(this.result);
+        const pdf = await pdfjsLib.getDocument(typedArray).promise;
+        let extractedText = "";
+
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const textContent = await page.getTextContent();
+          const pageText = textContent.items.map(item => item.str).join(" ");
+          extractedText += pageText + "\n";
         }
 
-        document.getElementById('score-form').addEventListener('submit', async function(event) {
-            event.preventDefault();
+        console.log("Extracted PDF Text:", extractedText);
 
-            const resultDiv = document.getElementById('result');
-            const resultContainer = document.getElementById('result-container');
-            const errorDiv = document.getElementById('error');
-            resultContainer.classList.add('hidden');
-            errorDiv.textContent = '';
+        // --- Regex mapping with special handling for "User Posts" ---
+        const fieldLabels = [
+          "Connections",
+          "Defaulter Neighbors",
+          "Verified Neighbors",
+          "Monthly Credit Bills",
+          "BNPL Utilization Rate",
+          "Mortgage Months Left",
+          "UPI Balances",
+          "EMI Status Log",
+          "Income-Expense Ratio",
+          "Owns Home",
+          "Monthly Rent",
+          "Recovery Days",
+          "Mortgage Status",
+          "User Posts"
+        ];
 
-            const formElements = document.getElementById('salaried-fields').getElementsByTagName('input');
-            let userData = {};
-            for (const element of formElements) {
-                if (element.name) {
-                    userData[element.name] = element.value;
-                }
-            }
+        const mappings = {};
+        fieldLabels.forEach((label) => {
+          let key = label.toLowerCase().replace(/\s+/g, "_");
+          if (label === "Income-Expense Ratio") key = "income-expense ratio";
 
-            const payload = {
-                model_type: "salaried",
-                user_data: userData
-            };
-            
-            resultDiv.textContent = 'Calculating...';
-            resultContainer.classList.remove('hidden');
-
-            try {
-                const response = await fetch('/predict', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                const result = await response.json();
-
-                if (response.ok) {
-                    resultDiv.textContent = `AltiCred Score: ${result.alticred_score}`;
-                } else {
-                    errorDiv.textContent = `Error: ${result.error}`;
-                    resultContainer.classList.add('hidden');
-                }
-
-            } catch (error) {
-                errorDiv.textContent = 'A network error occurred. Please ensure the backend server is running.';
-                resultContainer.classList.add('hidden');
-            }
+          if (label === "User Posts") {
+            // Special case: last field, capture everything till EOF
+            mappings[key] = new RegExp(`${label}:\\s*([\\s\\S]*)`, "i");
+          } else {
+            mappings[key] = new RegExp(
+              `${label}:\\s*(.*?)(?=\\s*(?:${fieldLabels.join("|")}):|$)`,
+              "i"
+            );
+          }
         });
 
-        // Initialize rent field state on page load
-        toggleRentField();
-    </script>
+        Object.keys(mappings).forEach(field => {
+          const match = extractedText.match(mappings[field]);
+          if (match) {
+            const input = document.querySelector(`[name="${field}"]`);
+            if (input) input.value = match[1].trim();
+          }
+        });
+
+        toggleRentField(); // update rent visibility
+      };
+      reader.readAsArrayBuffer(file);
+    });
+
+    document.getElementById('score-form').addEventListener('submit', async function(event) {
+      event.preventDefault();
+
+      const resultDiv = document.getElementById('result');
+      const resultContainer = document.getElementById('result-container');
+      const errorDiv = document.getElementById('error');
+      resultContainer.classList.add('hidden');
+      errorDiv.textContent = '';
+
+      const formElements = document.getElementById('salaried-fields').getElementsByTagName('input');
+      let userData = {};
+      for (const element of formElements) {
+        if (element.name) {
+          userData[element.name] = element.value;
+        }
+      }
+
+      const payload = {
+        model_type: "salaried",
+        user_data: userData
+      };
+      
+      resultDiv.textContent = 'Calculating...';
+      resultContainer.classList.remove('hidden');
+
+      try {
+        const response = await fetch('/predict', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+          resultDiv.textContent = `AltiCred Score: ${result.alticred_score}`;
+        } else {
+          errorDiv.textContent = `Error: ${result.error}`;
+          resultContainer.classList.add('hidden');
+        }
+
+      } catch (error) {
+        errorDiv.textContent = 'A network error occurred. Please ensure the backend server is running.';
+        resultContainer.classList.add('hidden');
+      }
+    });
+
+    // Initialize rent field state on page load
+    toggleRentField();
+  </script>
 </body>
 </html>
