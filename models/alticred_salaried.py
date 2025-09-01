@@ -6,6 +6,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import accuracy_score, roc_auc_score, mean_squared_error, r2_score
+import tensorflow as tf
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Dense
 from tensorflow.keras.optimizers import Adam
@@ -14,6 +15,7 @@ import json
 import re
 import warnings
 import pickle
+import os
 
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
@@ -329,11 +331,20 @@ class AltiCredScorer:
         print(f"R-squared (R²): {r2:.4f}")
         print("-----------------------------------------")
 
-    def save_model(self, filepath='models/alticred_salaried_model.pkl'):
-        """Save trained components to a pickle."""
+    def save_model(self, components_path='models/alticred_salaried_model_components.pkl', keras_model_dir='models'):
+        """Save trained components to separate files for stable deployment."""
+        if not os.path.exists(keras_model_dir):
+            os.makedirs(keras_model_dir)
+
+        # Separate and save Keras models in their native format
+        tf.keras.models.save_model(self.trust_encoder, os.path.join(keras_model_dir, 'trust_encoder.h5'))
+        tf.keras.models.save_model(self.autoencoder, os.path.join(keras_model_dir, 'autoencoder.h5'))
+        tf.keras.models.save_model(self.encoder, os.path.join(keras_model_dir, 'encoder.h5'))
+        tf.keras.models.save_model(self.decoder, os.path.join(keras_model_dir, 'decoder.h5'))
+
+        # Prepare other components for pickling
         model_data = {
             'trust_scaler': self.trust_scaler,
-            'trust_encoder': self.trust_encoder,
             'trust_model': self.trust_model,
             'resilience_scaler': self.resilience_scaler,
             'resilience_features': self.resilience_features,
@@ -346,81 +357,74 @@ class AltiCredScorer:
             'lang_model': self.lang_model,
             'meta_model': self.meta_model,
             'ae_scaler': self.ae_scaler,
-            'autoencoder': self.autoencoder,
-            'encoder': self.encoder,
-            'decoder': self.decoder,
             'sentiment_analyzer': self.sentiment_analyzer,
             'df_columns': self.df_columns
         }
-        with open(filepath, 'wb') as f:
+        
+        # Save the rest of the components using pickle
+        with open(components_path, 'wb') as f:
             pickle.dump(model_data, f)
-        print(f"Model saved to {filepath}")
+        
+        print(f"Non-Keras model components saved to {components_path}")
+        print(f"Keras models saved to the directory {keras_model_dir}")
 
     @classmethod
-    def load_model(cls, filepath='models/alticred_salaried_model.pkl'):
-        """Load a trained model from a pickle (no training data included)."""
-        with open(filepath, 'rb') as f:
+    def load_model(cls, components_path='models/alticred_salaried_model_components.pkl', keras_model_dir='models'):
+        """Load a trained model from separate files."""
+        # Load the pickled components
+        with open(components_path, 'rb') as f:
             model_data = pickle.load(f)
 
+        # Load the Keras models
+        model_data['trust_encoder'] = tf.keras.models.load_model(os.path.join(keras_model_dir, 'trust_encoder.h5'))
+        model_data['autoencoder'] = tf.keras.models.load_model(os.path.join(keras_model_dir, 'autoencoder.h5'))
+        model_data['encoder'] = tf.keras.models.load_model(os.path.join(keras_model_dir, 'encoder.h5'))
+        model_data['decoder'] = tf.keras.models.load_model(os.path.join(keras_model_dir, 'decoder.h5'))
+
+        # Create a new instance and populate it
         instance = cls.__new__(cls)
-
-        # components
-        instance.trust_scaler = model_data['trust_scaler']
-        instance.trust_encoder = model_data['trust_encoder']
-        instance.trust_model = model_data['trust_model']
-        instance.resilience_scaler = model_data['resilience_scaler']
-        instance.resilience_features = model_data['resilience_features']
-        instance.resilience_model = model_data['resilience_model']
-        instance.adapt_scaler = model_data['adapt_scaler']
-        instance.adapt_features = model_data['adapt_features']
-        instance.adapt_mortgage_cols = model_data['adapt_mortgage_cols']
-        instance.adapt_model = model_data['adapt_model']
-        instance.lang_vectorizer = model_data['lang_vectorizer']
-        instance.lang_model = model_data['lang_model']
-        instance.meta_model = model_data['meta_model']
-        instance.ae_scaler = model_data['ae_scaler']
-        instance.autoencoder = model_data['autoencoder']
-        instance.encoder = model_data['encoder']
-        instance.decoder = model_data['decoder']
-        instance.sentiment_analyzer = model_data['sentiment_analyzer']
-
-        # schema (fallback if older pickle doesn't have it)
-        instance.df_columns = model_data.get('df_columns', list(set(
-            ['connections','defaulter_neighbors','verified_neighbors',
-             'monthly_credit_bills','bnpl_utilization_rate','mortgage_months_left',
-             'upi_balances','emi_status_log','income-expense ratio','owns_home',
-             'monthly_rent','recovery_days','mortgage_status','user_posts','default_label']
-            + instance.resilience_features + instance.adapt_features
-        )))
+        for key, value in model_data.items():
+            setattr(instance, key, value)
 
         # no training df after load
         instance.df = None
 
-        print(f"Model loaded from {filepath}")
+        print(f"Model components and Keras models loaded from {components_path} and {keras_model_dir}")
         return instance
 
 
 # Train/evaluate/save when executed directly
 if __name__ == '__main__':
+    # 1. Train the model
     scorer = AltiCredScorer()
     scorer.evaluate_model()
+    
+    # 2. Save the model components correctly
     scorer.save_model()
-    print("\n--- Example prediction ---")
-    test_user = {
-        'connections': 'user_1,user_2,user_3',
-        'defaulter_neighbors': 1,
-        'verified_neighbors': 5,
-        'monthly_credit_bills': 15000.0,
-        'bnpl_utilization_rate': 0.3,
-        'mortgage_months_left': 120.0,
-        'upi_balances': '[1500, 2000, 1800]',
-        'emi_status_log': '[1, 1, 1, 0, 1]',
-        'income-expense ratio': 1.2,
-        'owns_home': 1,
-        'monthly_rent': 0.0,
-        'recovery_days': 3,
-        'mortgage_status': 'ongoing',
-        'user_posts': 'I had a great week at work and got a promotion!'
-    }
-    score = scorer.predict_alticred_score(test_user)
-    print(f"Test AltiCred Score: {score:.4f}")
+    
+    # 3. Demonstrate loading the model for a new prediction
+    print("\n--- Loading the saved model for deployment ---")
+    try:
+        loaded_scorer = AltiCredScorer.load_model()
+        print("\n--- Example prediction with the loaded model ---")
+        test_user = {
+            'connections': 'user_1,user_2,user_3',
+            'defaulter_neighbors': 1,
+            'verified_neighbors': 5,
+            'monthly_credit_bills': 15000.0,
+            'bnpl_utilization_rate': 0.3,
+            'mortgage_months_left': 120.0,
+            'upi_balances': '[1500, 2000, 1800]',
+            'emi_status_log': '[1, 1, 1, 0, 1]',
+            'income-expense ratio': 1.2,
+            'owns_home': 1,
+            'monthly_rent': 0.0,
+            'recovery_days': 3,
+            'mortgage_status': 'ongoing',
+            'user_posts': 'I had a great week at work and got a promotion!'
+        }
+        score = loaded_scorer.predict_alticred_score(test_user)
+        print(f"Test AltiCred Score: {score:.4f}")
+    except FileNotFoundError as e:
+        print(f"Error: {e}")
+        print("Please ensure you have run this script to train and save the models first.")
