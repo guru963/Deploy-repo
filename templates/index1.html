@@ -3,88 +3,86 @@
 <head>
     <meta charset="UTF-8">
     <title>AltiCred: Student Adaptability Score</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
-    
-    {% if shap_js %}
-        <script>{{ shap_js | safe }}</script>
-    {% endif %}
-
     <style>
         :root {
-            --bg-color: #fafbfc;
-            --primary-accent: #3b82f6;
-            --secondary-accent: #1e40af;
-            --accent-hover: #2563eb;
-            --text-primary: #1f2937;
-            --text-secondary: #6b7280;
-            --text-muted: #9ca3af;
+            --bg-start: #e0e7ff;
+            --bg-mid: #c7d2fe;
+            --bg-end: #a5b4fc;
+            --primary-accent: #4f46e5;
+            --primary-accent-dark: #4338ca;
+            --text-primary: #1e293b;
+            --text-secondary: #475569;
             --white: #ffffff;
-            --light-gray: #f8fafc;
-            --card-bg: rgba(255, 255, 255, 0.8);
-            --card-border: rgba(59, 130, 246, 0.1);
-            --card-hover-bg: rgba(255, 255, 255, 0.95);
-            --input-bg: rgba(248, 250, 252, 0.9);
-            --input-border: rgba(59, 130, 246, 0.15);
-            --input-focus-bg: rgba(255, 255, 255, 0.95);
-            --shadow-soft: rgba(0, 0, 0, 0.04);
-            --shadow-medium: rgba(59, 130, 246, 0.08);
-            --gradient-primary: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-            --gradient-subtle: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif;
+            --card-bg: rgba(255, 255, 255, 0.75);
+            --card-border: rgba(255, 255, 255, 0.5);
+            --input-bg: #f8fafc;
+            --input-border: #e2e8f0;
+            --shadow-lg: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+        }
+
+        /* --- Animated Background --- */
+        @keyframes gradientAnimation {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
 
         body {
             margin: 0;
-            padding-bottom: 40px;
+            padding: 2rem 1rem;
             font-family: var(--font-family);
-            background: var(--gradient-subtle);
+            background: linear-gradient(-45deg, var(--bg-start), var(--bg-mid), var(--bg-end));
+            background-size: 400% 400%;
+            animation: gradientAnimation 15s ease infinite;
             color: var(--text-primary);
             display: flex;
             flex-direction: column;
             align-items: center;
             min-height: 100vh;
-            line-height: 1.6;
+            box-sizing: border-box;
         }
-
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
+        
+        .container {
             width: 100%;
-            height: 100%;
-            background-image: 
-                radial-gradient(circle at 25% 25%, rgba(59, 130, 246, 0.02) 0%, transparent 50%),
-                radial-gradient(circle at 75% 75%, rgba(29, 78, 216, 0.015) 0%, transparent 50%);
-            pointer-events: none;
-            z-index: -1;
+            max-width: 550px;
         }
 
         header {
-            background: var(--gradient-primary);
-            width: 100%;
-            padding: 24px 0;
             text-align: center;
-            box-shadow: 
-                0 8px 16px var(--shadow-medium),
-                0 4px 8px var(--shadow-soft);
-            position: relative;
-            z-index: 10;
+            margin-bottom: 2rem;
+            color: var(--text-primary);
         }
 
         header h1 {
-            margin: 0;
-            font-size: 2.2rem;
-            font-weight: 700;
-            letter-spacing: -0.02em;
-            color: var(--white);
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            font-size: 2.75rem;
+            font-weight: 800;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            padding: 2.5rem;
+            border-radius: 1.5rem;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--card-border);
+            margin-bottom: 2rem;
+            animation: floatUp 1s ease-out;
+        }
+        
+        @keyframes floatUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
         }
 
         .upload-section {
-            margin-top: 40px;
             text-align: center;
-            z-index: 10;
+            margin-bottom: 2rem;
         }
 
         input[type="file"] {
@@ -93,242 +91,182 @@
 
         .upload-label {
             display: inline-block;
-            padding: 12px 20px;
-            font-size: 15px;
+            padding: 0.75rem 1.5rem;
             font-weight: 600;
             color: var(--primary-accent);
             background-color: var(--white);
-            border: 1px solid var(--input-border);
-            border-radius: 12px;
+            border: 1px solid var(--card-border);
+            border-radius: 0.75rem;
             cursor: pointer;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 8px var(--shadow-soft);
+            box-shadow: var(--shadow-md);
         }
 
         .upload-label:hover {
-            background-color: rgba(59, 130, 246, 0.05);
-            border-color: var(--primary-accent);
-        }
-
-        form {
-            background: var(--card-bg);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            padding: 40px;
-            border-radius: 20px;
-            width: 90%;
-            max-width: 520px;
-            margin-top: 20px;
-            box-shadow: 
-                0 20px 40px var(--shadow-soft),
-                0 8px 16px var(--shadow-medium),
-                inset 0 1px 0 rgba(255, 255, 255, 0.9);
-            border: 1px solid rgba(255, 255, 255, 0.8);
-            position: relative;
-            z-index: 10;
+            background-color: var(--primary-accent);
+            color: var(--white);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
         }
 
         label {
             display: block;
-            margin-top: 20px;
-            margin-bottom: 8px;
+            margin-bottom: 0.5rem;
             font-weight: 600;
-            color: var(--text-primary);
-            font-size: 1em;
-            text-align: left;
-        }
-
-        label:first-of-type {
-            margin-top: 0;
+            color: var(--text-secondary);
         }
 
         input, select {
             width: 100%;
-            padding: 14px 16px;
-            margin: 0;
+            padding: 0.9rem 1rem;
+            margin-bottom: 1.25rem;
             border: 1px solid var(--input-border);
-            border-radius: 12px;
+            border-radius: 0.75rem;
             background: var(--input-bg);
             color: var(--text-primary);
-            font-size: 15px;
-            font-family: var(--font-family);
-            font-weight: 500;
+            font-size: 1rem;
             outline: none;
-            transition: all 0.3s ease;
+            transition: box-shadow 0.2s ease, border-color 0.2s ease;
             box-sizing: border-box;
-            box-shadow: 0 2px 4px var(--shadow-soft);
+        }
+        
+        input:focus, select:focus {
+            border-color: var(--primary-accent);
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.2);
         }
         
         button {
-            margin-top: 32px;
             width: 100%;
-            padding: 16px 24px;
+            padding: 1rem 1.5rem;
             border: none;
-            background: var(--gradient-primary);
+            background: linear-gradient(135deg, var(--primary-accent) 0%, var(--primary-accent-dark) 100%);
             color: var(--white);
-            font-size: 16px;
-            font-weight: 600;
-            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            border-radius: 0.75rem;
             cursor: pointer;
             transition: all 0.3s ease;
+            box-shadow: var(--shadow-md);
         }
 
         button:hover {
-            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-            transform: translateY(-2px);
-            box-shadow: 0 12px 24px rgba(59, 130, 246, 0.25);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.15);
         }
         
-        .result, .explanation {
-            margin-top: 40px;
-            padding: 32px;
-            border-radius: 20px;
-            background: var(--card-bg);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
+        .result {
             text-align: center;
-            font-size: 1.1rem;
+            background: linear-gradient(135deg, var(--primary-accent-dark) 0%, var(--primary-accent) 100%);
+            color: var(--white);
+            padding: 2.5rem;
+        }
+
+        .result p {
+            margin: 0;
+            font-size: 1.25rem;
             font-weight: 500;
-            width: 90%;
-            max-width: 520px;
-            box-shadow: 
-                0 20px 40px var(--shadow-soft),
-                0 8px 16px var(--shadow-medium),
-                inset 0 1px 0 rgba(255, 255, 255, 0.9);
-            border: 1px solid rgba(255, 255, 255, 0.8);
-            color: var(--text-secondary);
-            position: relative;
-            z-index: 10;
-            animation: fadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0.9;
         }
         
-        .explanation {
-            max-width: 900px;
-            overflow-x: auto;
-        }
-
-        .explanation h2 {
-            margin-top: 0;
-            font-size: 1.5rem;
-            color: var(--text-primary);
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
         .score-number {
-            font-size: 2.5rem;
-            background: var(--gradient-primary);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            font-weight: 700;
-            letter-spacing: -0.02em;
-            margin: 16px 0;
-            display: inline-block;
+            font-size: 4rem;
+            font-weight: 800;
+            margin-top: 0.5rem;
+            line-height: 1;
+            text-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        
+        footer {
+            width: 100%;
+            text-align: center;
+            margin-top: 2rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            opacity: 0.8;
         }
     </style>
 </head>
 <body>
 
-<header>
-    <h1>AltiCred: Student Adaptability Score</h1>
-</header>
+<div class="container">
+    <header>
+        <h1>AltiCred Student Score</h1>
+    </header>
 
-<div class="upload-section">
-    <label for="pdf-upload" class="upload-label">Auto-fill from Resume (PDF)</label>
-    <input type="file" id="pdf-upload" accept="application/pdf">
-</div>
+    <div class="upload-section">
+        <label for="pdf-upload" class="upload-label">✨ Auto-fill from Resume (PDF)</label>
+        <input type="file" id="pdf-upload" accept="application/pdf">
+    </div>
 
-<form method="POST">
-    <label>Location (e.g., Rural, Tier 1 (Urban))</label>
-    <input type="text" name="location" required>
-    
-    <label>Type of Institution</label>
-    <select name="institution_type" required>
-        <option value="" disabled selected>Select an option</option>
-        <option value="Govt">Govt</option>
-        <option value="Private">Private</option>
-    </select>
-    
-    <label>Attendance Rate (%)</label>
-    <input type="number" step="0.01" name="attendance" required>
-    
-    <label>Scholarships Awards (Yes/No)</label>
-    <select name="scholarship" required>
-        <option value="" disabled selected>Select an option</option>
-        <option value="Yes">Yes</option>
-        <option value="No">No</option>
-    </select>
-    
-    <label>GPA</label>
-    <input type="number" step="0.01" name="gpa" required>
-    
-    <label>Stipend Allowance Amount (₹/month)</label>
-    <input type="number" step="0.01" name="stipend" required>
-    
-    <label>Internship/Part Time Job Income (₹/month)</label>
-    <input type="number" step="0.01" name="internship_income" required>
-    
-    <label>Ongoing Certification Courses</label>
-    <input type="number" name="ongoing_courses" required>
-    
-    <label>Achievement Level (0-5)</label>
-    <input type="number" min="0" max="5" name="achievement" required>
-    
-    <label>Student Highlight (e.g., Startup Founder, Innovator)</label>
-    <input type="text" name="highlight" required>
-    
-    <label>Median Packages (LPA)</label>
-    <input type="number" step="0.01" name="median_package" required>
-    
-    <button type="submit">Calculate Score</button>
-</form>
+    <div class="card">
+        <form method="POST">
+            <label>Location (e.g., Rural, Tier 1 (Urban))</label>
+            <input type="text" name="location" required>
+            <label>Type of Institution</label>
+            <select name="institution_type" required>
+                <option value="" disabled selected>Select an option</option>
+                <option value="Govt">Govt</option>
+                <option value="Private">Private</option>
+            </select>
+            <label>Attendance Rate (%)</label>
+            <input type="number" step="0.01" name="attendance" required>
+            <label>Scholarships Awards (Yes/No)</label>
+            <select name="scholarship" required>
+                <option value="" disabled selected>Select an option</option>
+                <option value="Yes">Yes</option>
+                <option value="No">No</option>
+            </select>
+            <label>GPA</label>
+            <input type="number" step="0.01" name="gpa" required>
+            <label>Stipend Allowance Amount (₹/month)</label>
+            <input type="number" step="0.01" name="stipend" required>
+            <label>Internship/Part Time Job Income (₹/month)</label>
+            <input type="number" step="0.01" name="internship_income" required>
+            <label>Ongoing Certification Courses</label>
+            <input type="number" name="ongoing_courses" required>
+            <label>Achievement Level (0-5)</label>
+            <input type="number" min="0" max="5" name="achievement" required>
+            <label>Student Highlight (e.g., Startup Founder, Innovator)</label>
+            <input type="text" name="highlight" required>
+            <label>Median Packages (LPA)</label>
+            <input type="number" step="0.01" name="median_package" required>
+            <button type="submit">Calculate Score</button>
+        </form>
+    </div>
 
-{% if score is not none %}
-<div class="result">
-    {% if score is string %}
-        <p>{{ score }}</p>
-    {% else %}
-        <p>Your Adaptability Score is:</p>
-        <div class="score-number">{{ "%.4f" | format(score) }}</div>
+    {% if score is not none %}
+    <div class="card result">
+        {% if score is string %}
+            <p>{{ score }}</p>
+        {% else %}
+            <p>Your Adaptability Score is:</p>
+            <div class="score-number">{{ "%.4f" | format(score) }}</div>
+        {% endif %}
+    </div>
     {% endif %}
-</div>
-{% endif %}
 
-{% if shap_plot_html %}
-<div class="explanation">
-    <h2>Prediction Explanation</h2>
-    {{ shap_plot_html | safe }}
+    <footer>
+        <p>&copy; 2025 AltiCred. All rights reserved.</p>
+    </footer>
 </div>
-{% endif %}
 
 <script>
     document.getElementById('pdf-upload').addEventListener('change', async function(event) {
         const file = event.target.files[0];
         if (!file) return;
-
         document.querySelector('.upload-label').textContent = 'Processing...';
-        
         const reader = new FileReader();
         reader.onload = async function(e) {
             const typedarray = new Uint8Array(e.target.result);
-            
             pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js`;
-
             const pdf = await pdfjsLib.getDocument(typedarray).promise;
-
             let textContent = '';
             for (let i = 1; i <= pdf.numPages; i++) {
                 const page = await pdf.getPage(i);
                 const text = await page.getTextContent();
                 textContent += text.items.map(item => item.str).join(' ');
             }
-
             textContent = textContent.replace(/\s+/g, ' ').trim();
-
             const mappings = {
                 location: /Location:\s*([^\n:]+)/i,
                 institution_type: /Institution Type:\s*(Govt|Private)/i,
@@ -342,7 +280,6 @@
                 highlight: /Student Highlight:\s*([^\n:]+)/i,
                 median_package: /Median Packages.*?:\s*([0-9.]+)/i
             };
-
             for (const [field, regex] of Object.entries(mappings)) {
                 const match = textContent.match(regex);
                 if (match) {
@@ -352,10 +289,8 @@
                     }
                 }
             }
-            
-            document.querySelector('.upload-label').textContent = 'Auto-fill from Resume (PDF)';
+            document.querySelector('.upload-label').textContent = '✨ Auto-fill from Resume (PDF)';
         };
-
         reader.readAsArrayBuffer(file);
     });
 </script>
