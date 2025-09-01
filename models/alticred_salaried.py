@@ -222,8 +222,6 @@ class AltiCredScorer:
         print("Synthetic data generated.")
         return generated_df
 
-    # -------------------- PREDICTION UTILITIES (no self.df dependency) --------------------
-
     def _predict_digital_trust_score(self, data):
         df = data.copy()
         df = ensure_cols(df, ['connections', 'defaulter_neighbors', 'verified_neighbors'], fill=0)
@@ -249,7 +247,6 @@ class AltiCredScorer:
         df = data.copy()
         df = ensure_cols(df, ['owns_home','monthly_rent','income-expense ratio',
                               'emi_status_log','recovery_days','monthly_credit_bills','mortgage_status'], fill=0)
-        # if mortgage_status missing/0, make string for get_dummies to work
         if 'mortgage_status' in df.columns:
             df['mortgage_status'] = df['mortgage_status'].replace(0, 'unknown').astype(str)
         else:
@@ -259,7 +256,6 @@ class AltiCredScorer:
         mortgage_dummies = pd.get_dummies(df['mortgage_status'], prefix='mortgage')
         df = pd.concat([df, mortgage_dummies], axis=1)
 
-        # ensure all trained dummy cols exist
         for col in self.adapt_mortgage_cols:
             if col not in df.columns:
                 df[col] = 0
@@ -280,34 +276,25 @@ class AltiCredScorer:
         X_combined = hstack([X_text, X_sentiment])
         return self.lang_model.predict_proba(X_combined)[:, 1]
 
-    # --------------------------------------------------------------------------------------
-
     def predict_alticred_score(self, user_data):
-        """Return final AltiCred score in [0,1] for a single user dict."""
         user_df = pd.DataFrame([user_data])
-
         s1 = self._predict_digital_trust_score(user_df)[0]
         s2 = self._predict_resilience_score(user_df)[0]
         s3 = self._predict_adaptability_score(user_df)[0]
         s4 = self._predict_language_sentiment_score(user_df)[0]
-
         base_scores = np.array([[s1, s2, s3, s4]])
         meta_prediction_proba = self.meta_model.predict_proba(base_scores)[0][1]
-
         risks = base_scores.flatten()
         total_risk = np.sum(risks)
         weights = risks / total_risk if total_risk > 0 else np.array([0.25, 0.25, 0.25, 0.25])
         weighted_score = np.sum(risks * weights)
-
         risk_score = (0.5 * meta_prediction_proba) + (0.5 * weighted_score)
         final_score = 1 - risk_score
         return np.clip(final_score, 0, 1)
 
     def evaluate_model(self):
-        """Evaluate on the training data (only available on trained instance)."""
         if getattr(self, 'df', None) is None:
             raise ValueError("Training DataFrame not available on a loaded model. Train first or evaluate during training run.")
-
         print("\n--- Evaluating Meta-Model Performance ---")
         meta_features = pd.DataFrame(index=self.df.index)
         meta_features['trust_score'] = self._predict_digital_trust_score(self.df)
@@ -315,16 +302,13 @@ class AltiCredScorer:
         meta_features['adaptability_score'] = self._predict_adaptability_score(self.df)
         meta_features['language_score'] = self._predict_language_sentiment_score(self.df)
         meta_features.fillna(meta_features.median(), inplace=True)
-
         y_true = self.df['default_label']
         y_pred = self.meta_model.predict(meta_features)
         y_proba = self.meta_model.predict_proba(meta_features)[:, 1]
-
         accuracy = accuracy_score(y_true, y_pred)
         auc = roc_auc_score(y_true, y_proba)
         rmse = np.sqrt(mean_squared_error(y_true, y_proba))
         r2 = r2_score(y_true, y_proba)
-
         print(f"Accuracy: {accuracy:.4f}")
         print(f"AUC: {auc:.4f}")
         print(f"RMSE: {rmse:.4f}")
@@ -332,15 +316,15 @@ class AltiCredScorer:
         print("-----------------------------------------")
 
     def save_model(self, components_path='models/alticred_salaried_model_components.pkl', keras_model_dir='models'):
-        """Save trained components to separate files for stable deployment."""
+        """Save trained components using the modern .keras format."""
         if not os.path.exists(keras_model_dir):
             os.makedirs(keras_model_dir)
 
-        # Separate and save Keras models in their native format
-        tf.keras.models.save_model(self.trust_encoder, os.path.join(keras_model_dir, 'trust_encoder.h5'))
-        tf.keras.models.save_model(self.autoencoder, os.path.join(keras_model_dir, 'autoencoder.h5'))
-        tf.keras.models.save_model(self.encoder, os.path.join(keras_model_dir, 'encoder.h5'))
-        tf.keras.models.save_model(self.decoder, os.path.join(keras_model_dir, 'decoder.h5'))
+        # Separate and save Keras models in the recommended native format
+        self.trust_encoder.save(os.path.join(keras_model_dir, 'trust_encoder.keras'))
+        self.autoencoder.save(os.path.join(keras_model_dir, 'autoencoder.keras'))
+        self.encoder.save(os.path.join(keras_model_dir, 'encoder.keras'))
+        self.decoder.save(os.path.join(keras_model_dir, 'decoder.keras'))
 
         # Prepare other components for pickling
         model_data = {
@@ -361,7 +345,6 @@ class AltiCredScorer:
             'df_columns': self.df_columns
         }
         
-        # Save the rest of the components using pickle
         with open(components_path, 'wb') as f:
             pickle.dump(model_data, f)
         
@@ -370,29 +353,32 @@ class AltiCredScorer:
 
     @classmethod
     def load_model(cls, components_path='models/alticred_salaried_model_components.pkl', keras_model_dir='models'):
-        """Load a trained model from separate files."""
-        # Load the pickled components
+        """Load a trained model, skipping compilation for inference."""
         with open(components_path, 'rb') as f:
             model_data = pickle.load(f)
 
-        # Load the Keras models
-        model_data['trust_encoder'] = tf.keras.models.load_model(os.path.join(keras_model_dir, 'trust_encoder.h5'))
-        model_data['autoencoder'] = tf.keras.models.load_model(os.path.join(keras_model_dir, 'autoencoder.h5'))
-        model_data['encoder'] = tf.keras.models.load_model(os.path.join(keras_model_dir, 'encoder.h5'))
-        model_data['decoder'] = tf.keras.models.load_model(os.path.join(keras_model_dir, 'decoder.h5'))
+        # Load the Keras models without compiling them
+        model_data['trust_encoder'] = tf.keras.models.load_model(
+            os.path.join(keras_model_dir, 'trust_encoder.keras'), compile=False
+        )
+        model_data['autoencoder'] = tf.keras.models.load_model(
+            os.path.join(keras_model_dir, 'autoencoder.keras'), compile=False
+        )
+        model_data['encoder'] = tf.keras.models.load_model(
+            os.path.join(keras_model_dir, 'encoder.keras'), compile=False
+        )
+        model_data['decoder'] = tf.keras.models.load_model(
+            os.path.join(keras_model_dir, 'decoder.keras'), compile=False
+        )
 
-        # Create a new instance and populate it
         instance = cls.__new__(cls)
         for key, value in model_data.items():
             setattr(instance, key, value)
-
-        # no training df after load
         instance.df = None
 
         print(f"Model components and Keras models loaded from {components_path} and {keras_model_dir}")
         return instance
-
-
+    
 # Train/evaluate/save when executed directly
 if __name__ == '__main__':
     # 1. Train the model
