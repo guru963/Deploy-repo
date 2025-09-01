@@ -5,7 +5,7 @@ import sys
 sys.path.insert(0, './models')
 
 # Import your scorer classes
-from alticred_salaried import AltiCredScorer as SalariedScorer
+from AltiCred.alticred_salaried import AltiCredScorer as SalariedScorer
 
 salaried_bp = Blueprint('salaried', __name__, template_folder='templates')
 
