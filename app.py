@@ -1,25 +1,33 @@
-# app.py
-
 from flask import Flask, request, jsonify, render_template
 import pandas as pd
 import numpy as np
 import pickle
 import os
 import json
+import tensorflow as tf
 
 # --- Initialize the Flask App ---
 app = Flask(__name__)
 
-# --- Load the Trained Model ---
+# --- Load the Trained Model and Components ---
 def load_alticred_model():
-    """Load the trained AltiCred model from pickle file."""
-    model_path = 'models/alticred_salaried_model.pkl'
+    """Load the trained AltiCred model and its components."""
+    # We now load the Keras model separately from the pickled components
+    model_components_path = 'models/alticred_salaried_model_components.pkl'
+    trust_model_path = 'models/alticred_trust_model.h5'
     
-    if not os.path.exists(model_path):
-        raise FileNotFoundError(f"Model file not found at {model_path}. Please train and save the model first.")
+    # Check if all required files exist
+    if not os.path.exists(model_components_path):
+        raise FileNotFoundError(f"Model components file not found at {model_components_path}.")
+    if not os.path.exists(trust_model_path):
+        raise FileNotFoundError(f"Trust model file not found at {trust_model_path}.")
     
-    with open(model_path, 'rb') as f:
+    print("Loading model components from pickle file...")
+    with open(model_components_path, 'rb') as f:
         model_data = pickle.load(f)
+
+    print("Loading Keras model from HDF5 file...")
+    model_data['trust_model'] = tf.keras.models.load_model(trust_model_path)
     
     return model_data
 
@@ -70,7 +78,9 @@ class AltiCredPredictor:
         X = df[['defaulter_neighbors', 'verified_neighbors', 'num_connections']]
         X_scaled = self.trust_scaler.transform(X)
         X_encoded = self.trust_encoder.predict(X_scaled)
-        return self.trust_model.predict_proba(X_encoded)[:, 1]
+        # Note: Keras models predict differently, they return raw predictions, not probabilities
+        predictions = self.trust_model.predict(X_encoded)
+        return predictions.flatten()
 
     def _predict_resilience_score(self, data):
         df = data.copy()
@@ -158,7 +168,7 @@ try:
     print("AltiCred model loaded successfully!")
 except Exception as e:
     print(f"Error loading model: {e}")
-    print("Please ensure you have trained and saved the model first by running the training script.")
+    print("Please ensure you have trained and saved the model correctly.")
     exit(1)
 
 # --- Helper function for safe numeric conversion ---
