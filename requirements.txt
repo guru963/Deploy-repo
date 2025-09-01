@@ -63,4 +63,4 @@ xgboost==2.0.3
 lightgbm==4.1.0
 shap==0.45.0
 flask-cors==5.0.0
-
+keras==2.15.0
