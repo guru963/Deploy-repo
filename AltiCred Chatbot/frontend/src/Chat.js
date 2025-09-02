@@ -28,7 +28,7 @@ function Chat({ userType, onBack }) {
     setInput('');
 
     // Call the Flask API using the correct Render backend URL
-    const backendUrl = 'https://alticred-chatbot-backend.onrender.com';
+    const backendUrl = 'http://127.0.0.1:5000';
     
     const response = await fetch(`${backendUrl}/get_score`, {
       method: 'POST',
